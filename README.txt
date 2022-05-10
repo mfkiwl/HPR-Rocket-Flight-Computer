@@ -55,7 +55,7 @@ Preflight audible reporting options: Perfectflight or Marsa
 One-time hardware configuration via SD card, settings stored in EEPROM
 
 --------FLIGHT COMPUTER COMPONENTS----------
-    Microprocessor: Teensy 3.5 or 3.6 (compatible with provided PCB file) or Teensy 4.1/4.0/3.2 (no PCB file provided)
+    Microprocessor: Teensy 3.2, 3.5, 3.6, 4.0, 4.1 (PCB file compatible with Teensy 3.5/3.6)
          9 DoF IMU: LSM9DS1, LSM6DS33, or LSM303 & L3GD20H combo
 100G Accelerometer: H3LIS331DL, ADXL377, or ADXL377 & ADS1115 combo
    Pressure Sensor: MS5611, MS5607, MPL3115A2, BMP180, BMP280, or BMP388 (Note: BMP280 & BMP388 incompatible with telemetry due to EMI)
@@ -81,9 +81,7 @@ One-time hardware configuration via SD card, settings stored in EEPROM
      10K Ohm Resistor: 1/8 Watt
 
 --------ADDITIONAL LIBRARIES REQUIRED----------
-SDFat V1.1.4 (V2.1 is not compatible)
 TinyGPS++
-RadioHead
 
 --------INTENDED FUTURE REVISIONS----------
 1) Upgrade ground station with GPS, digital compass, & Bluetooth
