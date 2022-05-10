@@ -1,7 +1,7 @@
 //----------------------------
 //LIST OF FUNCTIONS & ROUTINES
 //----------------------------
-//restoreGPSdefaults(): overrides command settings and restores factory settings
+//restoreGPSdefaults(): overrides command settings and restores factory settings (not currently used)
 //configGPS(): sends UBX commands to update navigation, data rate, GNSS constellations, reduce NMEA sentences, interference thresholds, and baud rate
 //GPSpowerSaveMode(): after touchdown reduce the power consumption and update rate
 //sendUBX(): helper function to send serial data
@@ -152,9 +152,9 @@ void configGPS() {
       gpsSetSuccess += getUBX_ACK(&setBaudRate[2]);}
     if (gpsSetSuccess == 3 && settings.testMode){Serial.println("Ublox Baud Rate 38400 Failed!");}
     else{
-      HWSERIAL.end();
-      HWSERIAL.clear();
-      HWSERIAL.begin(38400);}}
+      HWSERIAL->end();
+      HWSERIAL->clear();
+      HWSERIAL->begin(38400);}}
   
   }//end configGPS
 
@@ -173,7 +173,7 @@ void GPSpowerSaveMode(){
   byte setPwr2[] = {0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92}; 
 
   //Generate configuration string to put receiver into 1Hz update mode
-  byte setDataRate1Hz[] = {0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0xE8, 0x03, 0x01, 0x00, 0x01, 0x00, 0x01, 0x39};//once per second
+  //byte setDataRate1Hz[] = {0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0xE8, 0x03, 0x01, 0x00, 0x01, 0x00, 0x01, 0x39};//once per second
   byte setDataRate01Hz[] = {0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0x10, 0x27, 0x01, 0x00, 0x01, 0x00, 0x4D, 0xDD};//once per 10 seconds
 
   //Config GNSS
@@ -206,7 +206,8 @@ void GPSpowerSaveMode(){
     sendUBX(setDataRate01Hz, sizeof(setDataRate01Hz));  //Send UBX Packet
     gpsSetSuccess += getUBX_ACK(&setDataRate01Hz[2]);}
   if (gpsSetSuccess == 3 && settings.testMode){Serial.println("Data update mode configuration failed!");}
-  gpsSetSuccess = 0;}
+  gpsSetSuccess = 0;
+}//End PowerSave Mode
 
 void calcChecksum(byte *checksumPayload, byte payloadSize) {
   byte CK_A = 0, CK_B = 0;
@@ -221,11 +222,11 @@ void calcChecksum(byte *checksumPayload, byte payloadSize) {
 
 void sendUBX(byte *UBXmsg, byte msgLength) {
   for(int i = 0; i < msgLength; i++) {
-    HWSERIAL.write(UBXmsg[i]);
-    HWSERIAL.flush();}
+    HWSERIAL->write(UBXmsg[i]);
+    HWSERIAL->flush();}
     
-  HWSERIAL.println();
-  HWSERIAL.flush();}
+  HWSERIAL->println();
+  HWSERIAL->flush();}
 
 byte getUBX_ACK(byte *msgID) {
   byte CK_A = 0, CK_B = 0;
@@ -234,8 +235,8 @@ byte getUBX_ACK(byte *msgID) {
   byte ackPacket[10] = {0xB5, 0x62, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   int i = 0;
   while (1) {
-    if (HWSERIAL.available()) {
-      incoming_char = HWSERIAL.read();
+    if (HWSERIAL->available()) {
+      incoming_char = HWSERIAL->read();
       if (incoming_char == ackPacket[i]) {
         i++;}
       else if (i > 2) {

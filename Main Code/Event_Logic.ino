@@ -269,7 +269,7 @@ void checkEvents(){
     if(settings.inflightRecover != 0){EEPROM.update(eeprom.lastEvent, radio.event);}}
     
   //Write the data to the card 3s after apogeeFire in case of crash or powerloss
-  if(events.apogeeFire && !syncApogee && !settings.testMode && fltTime.timeCurrent - fltTime.apogeeFire >= 3000000UL){outputFile.sync();syncApogee = true;}
+  if(events.apogeeFire && !syncApogee && !settings.testMode && fltTime.timeCurrent - fltTime.apogeeFire >= 3000000UL){syncSD();syncApogee = true;}
 
   //Detect separation after apogee
   if(events.apogeeFire && !events.mainDeploy && accel.z > 4*g && fltTime.timeCurrent - fltTime.apogeeFire <= 2000000UL){
@@ -295,7 +295,7 @@ void checkEvents(){
       if(settings.inflightRecover != 0){EEPROM.update(eeprom.lastEvent, radio.event);}}
 
   //Write the data to the card 3s after mainDeploy in case of crash or powerloss
-  if(events.mainDeploy && !syncMains && !settings.testMode && fltTime.timeCurrent - fltTime.mainDeploy >= 3000000UL){outputFile.sync();syncMains = true;}
+  if(events.mainDeploy && !syncMains && !settings.testMode && fltTime.timeCurrent - fltTime.mainDeploy >= 3000000UL){syncSD();syncMains = true;}
   
   //Turn off the pyros after the allotted time
   if (pyroFire) {

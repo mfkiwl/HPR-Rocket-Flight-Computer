@@ -1,9 +1,9 @@
 //----------------------------
 //LIST OF FUNCTIONS & ROUTINES
 //----------------------------
-//radioSendPacket(): main routine to send telemetry packets
+//radioSendPacket(): main routine to build and send telemetry packets
 //hopTXfreq(): hops frequency when FHSS is active
-//syncPkt(): sends a sync packet on the hailing freq
+//syncPkt(): sends a sync packet on the FHSS hailing freq
 //-----------CHANGE LOG------------
 //17 JUL 21: initial breakout created
 //---------------------------------
@@ -22,7 +22,7 @@ inflight:
 - shift frequencies every 600ms
 - Flight computer:
 -- Force a sync packet on the current channel at liftoff
--- 3 packets sent then shift
+-- send 3 packets on one freq, sent then shift freq
 -- every third shift (once per 1.8s) send sync packet on hailing frequency
 - Ground Station
 -- Shift frequency after 3rd consecutive packet
@@ -158,10 +158,6 @@ int16_t gndPktNum = 0;
 byte hailChnl = 0;
 float freq;
 boolean sendPkt = false;
-union {
-   float freq;
-   byte unionByte[4];
-} freqUnion;
 
 void radioSendPacket(){
   RH_RF95 rf95(pins.radioCS, pins.radioIRQ);
@@ -198,9 +194,10 @@ void radioSendPacket(){
       dataPacket[pktPosn]=nextChnl2; pktPosn++;}
     TX = rf95.send((uint8_t *)dataPacket, pktPosn);
     TXdataStart = micros();
+    int32_t pktSize = pktPosn;
     pktPosn = 0;
     if(radioDebug && settings.testMode){
-      if(TX){Serial.println(F("PreFlight Packet Sent"));Serial.print("Alt: ");Serial.println(Alt);}
+      if(TX){Serial.println(F("PreFlight Packet Sent"));Serial.print("PktSize: ");Serial.println(pktSize);}
       else if(!TX){Serial.println(F("PreFlight Packet Failed!"));}}
     if(settings.FHSS && sensors.radio == 2){
       hopNum = nextHop;
@@ -346,6 +343,8 @@ void hopTXfreq(){
   hopFreq = false;}
 
 void syncPkt(){
+
+  Serial.println("Sync Packet");
   
   RH_RF95 rf95(pins.radioCS, pins.radioIRQ);
   float freq;

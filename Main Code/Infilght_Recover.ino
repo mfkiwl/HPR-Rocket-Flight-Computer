@@ -15,8 +15,14 @@ boolean rapidReset(){
 
   RH_RF95 rf95(pins.radioCS, pins.radioIRQ);
       
-  //read pin settings
-  pins.i2c = EEPROM.read(eeprom.i2cBus);
+  //Read pin settings from EEPROM
+  Serial.print(F("Reading EEPROM..."));
+  pins.accelCS = EEPROM.read(eeprom.accelCSpin);
+  pins.gyroCS = EEPROM.read(eeprom.gyroCSpin);
+  pins.magCS = EEPROM.read(eeprom.magCSpin);
+  pins.highG_CS = EEPROM.read(eeprom.highGcsPin);
+  pins.SD_CS = EEPROM.read(eeprom.sdCSpin);
+  pins.baroCS = EEPROM.read(eeprom.baroCSpin);
   pins.pyro1Cont = EEPROM.read(eeprom.pyro1ContPin);
   pins.pyro1Fire = EEPROM.read(eeprom.pyro1FirePin);
   pins.pyro2Cont = EEPROM.read(eeprom.pyro2ContPin);
@@ -25,8 +31,8 @@ boolean rapidReset(){
   pins.pyro3Fire = EEPROM.read(eeprom.pyro3FirePin);
   pins.pyro4Cont = EEPROM.read(eeprom.pyro4ContPin);
   pins.pyro4Fire = EEPROM.read(eeprom.pyro4FirePin);
-  pins.nullCont = EEPROM.read(eeprom.nullContPin);
-  pins.nullFire = pins.nullCont+1;
+  pins.nullCont = EEPROM.read(eeprom.nullPin);
+  pins.nullFire = pins.nullCont;
   pins.beep = EEPROM.read(eeprom.beepPin);
   pins.batt = EEPROM.read(eeprom.battReadPin);
   pins.testGnd = EEPROM.read(eeprom.testModeGndPin);
@@ -35,13 +41,6 @@ boolean rapidReset(){
   pins.radioIRQ = EEPROM.read(eeprom.radioIRQpin);
   pins.radioRST = EEPROM.read(eeprom.radioRstPin);
   pins.radioEN = EEPROM.read(eeprom.radioEnPin);
-  pins.highG_CS = EEPROM.read(eeprom.highG_CS);
-  sensors.accel = EEPROM.read(eeprom.accelID);
-  sensors.gyro = EEPROM.read(eeprom.gyroID);
-  sensors.highG = EEPROM.read(eeprom.highGID);
-  sensors.baro = EEPROM.read(eeprom.baroID);
-  sensors.radio = EEPROM.read(eeprom.radioID);
-  sensors.GPS = EEPROM.read(eeprom.GPSID);
   pins.servo1 = EEPROM.read(eeprom.servo1pin);
   pins.servo2 = EEPROM.read(eeprom.servo2pin);
   pins.servo3 = EEPROM.read(eeprom.servo3pin);
@@ -50,7 +49,40 @@ boolean rapidReset(){
   pins.servo6 = EEPROM.read(eeprom.servo6pin);
   pins.servo7 = EEPROM.read(eeprom.servo7pin);
   pins.servo8 = EEPROM.read(eeprom.servo8pin);
-
+  //read sensor settings from EEPROM
+  sensors.accel = EEPROM.read(eeprom.accelID);
+  sensors.mag = EEPROM.read(eeprom.magID);
+  sensors.gyro = EEPROM.read(eeprom.gyroID);
+  sensors.highG = EEPROM.read(eeprom.highGID);
+  sensors.baro = EEPROM.read(eeprom.baroID);
+  sensors.radio = EEPROM.read(eeprom.radioID);
+  sensors.GPS = EEPROM.read(eeprom.GPSID);
+  sensors.accelBusType = (char)EEPROM.read(eeprom.accelBusType);
+  sensors.gyroBusType = (char)EEPROM.read(eeprom.gyroBusType);
+  sensors.magBusType = (char)EEPROM.read(eeprom.magBusType);
+  sensors.highGBusType = (char)EEPROM.read(eeprom.highGBusType);
+  sensors.baroBusType = (char)EEPROM.read(eeprom.baroBusType);
+  sensors.sdBusType = (char)EEPROM.read(eeprom.sdBusType);
+  sensors.gpsBusType = (char)EEPROM.read(eeprom.gpsBusType);
+  sensors.radioBusType = (char)EEPROM.read(eeprom.radioBusType);
+  sensors.accelBusNum = EEPROM.read(eeprom.accelBusType);
+  sensors.gyroBusNum = EEPROM.read(eeprom.gyroBusNum);
+  sensors.magBusNum = EEPROM.read(eeprom.magBusNum);
+  sensors.highGBusNum = EEPROM.read(eeprom.highGBusNum);
+  sensors.baroBusNum = EEPROM.read(eeprom.baroBusNum);
+  sensors.sdBusNum = EEPROM.read(eeprom.sdBusNum);
+  sensors.gpsBusNum = EEPROM.read(eeprom.gpsBusNum);
+  sensors.radioBusNum = EEPROM.read(eeprom.radioBusNum);
+  for(byte i = 0; i < sizeof(settings.callSign); i++){settings.callSign[i] = EEPROM.read(eeprom.callSign+i);}
+  settings.callSign[sizeof(settings.callSign)-1] = '\0';
+  settings.HWid[0] = (char)EEPROM.read(eeprom.HWversion);
+  settings.HWid[1] = '.';
+  settings.HWid[2] = (char)EEPROM.read(eeprom.HWsubVersion);
+  settings.HWid[3] = '.';
+  settings.HWid[4] = (char)EEPROM.read(eeprom.HWunitNum);
+  settings.HWid[5] = '\0';
+  Serial.println(F("complete!"));
+  
   //Set the mode of the output pins
   pinMode(pins.nullCont, INPUT);
   pinMode(pins.nullFire, INPUT);
@@ -64,7 +96,21 @@ boolean rapidReset(){
   pinMode(pins.pyro4Fire, OUTPUT);   
   pinMode(pins.beep, OUTPUT);            
   pinMode(pins.testRead, INPUT_PULLUP);   
-  pinMode(pins.testGnd, OUTPUT);           
+  pinMode(pins.testGnd, OUTPUT); 
+  pinMode(pins.radioCS, OUTPUT);       
+  //Set the pyro firing pins to LOW for safety
+  digitalWrite(pins.pyro1Fire, LOW);
+  digitalWrite(pins.pyro2Fire, LOW);
+  digitalWrite(pins.pyro3Fire, LOW);
+  digitalWrite(pins.pyro4Fire, LOW);
+  digitalWrite(pins.radioCS, HIGH);
+  digitalWrite(pins.accelCS, HIGH);
+  digitalWrite(pins.gyroCS, HIGH);
+  digitalWrite(pins.magCS, HIGH);
+  digitalWrite(pins.highG_CS, HIGH);
+  digitalWrite(pins.baroCS, HIGH);
+  digitalWrite(pins.SD_CS, HIGH);
+  Serial.println("Set Pins Low");        
   //Set the pyro firing pins to LOW for safety
   digitalWrite(pins.pyro1Fire, LOW);
   digitalWrite(pins.pyro2Fire, LOW);
@@ -73,29 +119,6 @@ boolean rapidReset(){
 
   //setup the ADC for sampling the battery
   analogReadResolution(16);
-
-  //restart I2C communication
-  if(settings.testMode){Serial.print("Starting i2c bus  ");Serial.println(pins.i2c);}
-  switch (pins.i2c){
-   
-    case 0: Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
-            break;
-    case 1: Wire1.begin(I2C_MASTER, 0x00, I2C_PINS_37_38, I2C_PULLUP_EXT, 400000);
-            break;
-    case 2: Wire2.begin(I2C_MASTER, 0x00, I2C_PINS_3_4, I2C_PULLUP_EXT, 400000);
-            break;
-    case 3: Wire.begin(I2C_MASTER, 0x00, I2C_PINS_7_8, I2C_PULLUP_EXT, 400000);
-            pins.i2c = 0;
-            break;
-    case 4: Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_EXT, 400000);
-            pins.i2c = 0;
-            break;
-    case 5: Wire.begin(I2C_MASTER, 0x00, I2C_PINS_33_34, I2C_PULLUP_EXT, 400000);
-            pins.i2c = 0;
-            break;
-    case 6: Wire.begin(I2C_MASTER, 0x00, I2C_PINS_47_48, I2C_PULLUP_EXT, 400000);
-            pins.i2c = 0;
-            break;}
 
   //read user settings stored in EEPROM
   readEEPROMsettings(); 
@@ -127,13 +150,15 @@ boolean rapidReset(){
   SPI.begin();
 
   //restart hardware serial
-  HWSERIAL.begin(9600);
+  setHWSERIAL();
+  if(sensors.GPS == 3){HWSERIAL->begin(38400);Serial.println("Starting HWSerial at 38400 baud");}
+  else{HWSERIAL->begin(9600);Serial.println("Starting HWSerial at 9600 baud");}
 
   //Start Sensors
-  SD.begin();
+  restartSD();
   beginAccel();
   beginGyro();
-  beginHighG('F');
+  beginHighG();
   beginBaro();
   if(settings.TXenable && settings.inflightRecover > 0){
     rf95.init();
@@ -187,38 +212,7 @@ boolean rapidReset(){
   mag.biasZ = calUnion.calValue;
 
   //read the orientation variables from EEPROM
-  //IMU
-  accel.dirX = mag.dirX = gyro.dirX = (int8_t)EEPROM.read(eeprom.imuXsign);
-  accel.orientX = mag.orientX = gyro.orientX = (char)EEPROM.read(eeprom.imuXptr);
-  if(accel.orientX == 'X'){accel.ptrX = &accel.rawX; mag.ptrX = &mag.rawX; gyro.ptrX = &gyro.rawX;}
-  if(accel.orientX == 'Y'){accel.ptrX = &accel.rawY; mag.ptrX = &mag.rawY; gyro.ptrX = &gyro.rawY;}
-  if(accel.orientX == 'Z'){accel.ptrX = &accel.rawZ; mag.ptrX = &mag.rawZ; gyro.ptrX = &gyro.rawZ;}
-  accel.dirY = mag.dirY = gyro.dirY = (int8_t)EEPROM.read(eeprom.imuYsign);
-  accel.orientY = mag.orientY = gyro.orientY = (char)EEPROM.read(eeprom.imuYptr);
-  if(accel.orientY == 'X'){accel.ptrY = &accel.rawX; mag.ptrY = &mag.rawX; gyro.ptrY = &gyro.rawX;}
-  if(accel.orientY == 'Y'){accel.ptrY = &accel.rawY; mag.ptrY = &mag.rawY; gyro.ptrY = &gyro.rawY;}
-  if(accel.orientY == 'Z'){accel.ptrY = &accel.rawZ; mag.ptrY = &mag.rawZ; gyro.ptrY = &gyro.rawZ;}
-  accel.dirZ = mag.dirZ = gyro.dirZ = (int8_t)EEPROM.read(eeprom.imuZsign);
-  accel.orientZ = mag.orientZ = gyro.orientZ = (char)EEPROM.read(eeprom.imuZptr);
-  if(accel.orientZ == 'X'){accel.ptrZ = &accel.rawX; mag.ptrZ = &mag.rawX; gyro.ptrZ = &gyro.rawX;}
-  if(accel.orientZ == 'Y'){accel.ptrZ = &accel.rawY; mag.ptrZ = &mag.rawY; gyro.ptrZ = &gyro.rawY;}
-  if(accel.orientZ == 'Z'){accel.ptrZ = &accel.rawZ; mag.ptrZ = &mag.rawZ; gyro.ptrZ = &gyro.rawZ;}
-  //highG
-  highG.dirX = (int8_t)EEPROM.read(eeprom.hiGxSign);
-  highG.orientX = (char)EEPROM.read(eeprom.hiGxPtr);
-  if(highG.orientX == 'X'){highG.ptrX = &highG.rawX;}
-  if(highG.orientX == 'Y'){highG.ptrX = &highG.rawY;}
-  if(highG.orientX == 'Z'){highG.ptrX = &highG.rawZ;}
-  highG.dirY = (int8_t)EEPROM.read(eeprom.hiGySign);
-  highG.orientY = (char)EEPROM.read(eeprom.hiGyPtr);
-  if(highG.orientY == 'X'){highG.ptrY = &highG.rawX;}
-  if(highG.orientY == 'Y'){highG.ptrY = &highG.rawY;}
-  if(highG.orientY == 'Z'){highG.ptrY = &highG.rawZ;}
-  highG.dirZ = (int8_t)EEPROM.read(eeprom.hiGzSign);
-  highG.orientZ = (char)EEPROM.read(eeprom.hiGzPtr);
-  if(highG.orientZ == 'X'){highG.ptrZ = &highG.rawX;}
-  if(highG.orientZ == 'Y'){highG.ptrZ = &highG.rawY;}
-  if(highG.orientZ == 'Z'){highG.ptrZ = &highG.rawZ;}
+  readOrientation();
   
   //Reset the SD card
   // Rename the data file to FLIGHT01.txt
@@ -237,17 +231,7 @@ boolean rapidReset(){
   dataString[12]='\0';
   
   //Find the last file and continue writing
-  n = 1;
-  while (SD.exists(dataString)) {
-    n++;
-    if(n<10){itoa(n, dataString + 7,10);}
-    else{itoa(n, dataString + 6,10);}
-    dataString[8]='.';}
-  n--;
-  if(n<10){itoa(n, dataString + 7,10);}
-  else{itoa(n, dataString + 6,10);}
-  dataString[8]='.';
-  outputFile = SD.open(dataString, FILE_WRITE | O_AT_END);
+  reOpenSD();
   
   //read the base altitude
   for(byte i=0; i<4; i++){floatUnion.Byte[i] = (byte)EEPROM.read(eeprom.baseAlt + i);}
@@ -256,7 +240,6 @@ boolean rapidReset(){
   //sample sensors and alert user that the system is recovering
   uint32_t sampleStart = micros();
   lastBaro = 0UL;
-  if(sensors.status_BMP180 == true){getTemp = true;}
 
   //set flight type to Single Stage, no attempted recovery of complex flight types (2-stage or airstart)
   settings.fltProfile = 'S';
@@ -358,40 +341,11 @@ boolean rapidReset(){
     getGyro();
 
     //Get a barometric event if needed
-    if(!sensors.status_BMP180 && micros()-lastBaro >= timeBtwnBaro){
+    if(micros()-lastBaro >= timeBtwnBaro){
         prevBaroAlt = Alt;
         getBaro();
         lastBaro = micros();
-        prevBaroTime = baroTime;
-        baroTime = lastBaro;
         newBaro=true;}
-  
-    //Get a BMP180 barometric event if needed
-    //See if a new temp is needed
-    if (sensors.status_BMP180){
-  
-      if(getTemp){
-        initiateTemp();
-        tempReadStart = micros();
-        getTemp = false;
-        readTemp = true;}
-  
-      if(readTemp && micros() - tempReadStart > tmpRdTime){
-        initiatePressure(&temperature);
-        pressReadStart = micros();
-        readTemp = false;
-        readPress = true;}
-  
-      if(readPress && micros() - pressReadStart > bmpRdTime){
-        getPressure(&pressure);
-        lastBMP = micros();
-        prevBaroAlt = Alt;
-        prevBaroTime = baroTime;
-        baroTime = lastBMP;
-        Alt = pressureToAltitude(seaLevelPressure, pressure);
-        readPress = false;
-        getTemp = true;
-        newBaro = true;}}
         
       //-------------------------------------------------------
       //assess flight conditions

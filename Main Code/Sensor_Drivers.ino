@@ -1,7 +1,33 @@
 //----------------------------
+//Written by SparkyVT, TRA #12111, NAR #85720, L3
+//Sensor Package 1: LSM303DLHC, L3GD20, BMP180, ADS1115, ADXL377
+//Sensor Package 2: LSM9DS1, MPL3115A2, H3LIS331DL
+//Sensor Package 3: LSM9DS1, MPL3115A2, ADXL377
+//Sensor Package 4: LSM9DS1, MS5611, H3LIS331DL
+//Sensor Package 5: LSM6DS33, LIS3MDL, MS5607, H3LIS331DL
+//-----------Change Log------------
+//26 Nov 17: Version 1 created to support Adafruit 10Dof board
+//10 Nov 18: Version 2 created to support LSM9DS1, H3LIS331DL, BMP280, BMP388
+//30 Apr 19: Version 3 created to support MPL3115A2 after EMI problems with BMP280 & BMP388
+//31 Jan 20: Version 4 created to support all coded sensors and all orientations
+//29 Oct 20: Added code for MS5611 sensor
+//04 AUG 21: Added variable gain for LSM9DS1 accelerometer
+//10 Aug 21: Removed variable gain after testing showed no expected improvement
+//12 NOV 21: Corrected MS5611 bugs and added SPI support for H3LIS331DL
+//28 NOV 21: Extended generic barometric pressure sensor offset calibration to all supported sensors
+//30 DEC 21: Added support for LSM6DS33, LIS3MDL, MS5607
+//03 JAN 22: Moved I2C and SPI generic functions to Bus_Mgmt tab to better support different processors
+//17 JAN 22: Updated to have any device on any I2C or SPI bus
+//--------Supported Sensors---------
+//Accelerometers:LSM303, LSM9DS1, LSM6DS33
+//Gyroscopes: L3GD20H, LSM9DS1, LSM6DS33
+//Magnetometers: LSM303, LSM9DS1, LIS3MDL
+//High-G Accelerometers: H3LIS331DL, ADS1115 & ADXL377 Combo, ADXL377 & Teensy3.5 ADC combo
+//Barometric: BMP180, BMP280, BMP388, MPL3115A2, MS5611, MS5607
+//WARNING: New generation Bosch sensors are sensitive to RF interference (BMP280,BMP388,etc)
+//----------------------------
 //LIST OF FUNCTIONS & ROUTINES
 //----------------------------
-
 //GENERIC SENSOR FUNCTIONS
 //beginAccel(): starts accelerometer
 //getAccel(): gets accelerometer data
@@ -9,38 +35,38 @@
 //getGyro(): gets gyro data
 //beginHighG(): starts high-g accelerometer
 //getHighG(): gets high-g accelerometer data
-//setMagGain(): sets the magnetometer gain
+//beginMag(): starts magnetometer if exernal to IMU
+//resetMagGain(): sets the magnetometer gain to 8 Gauss for the magnetic switch function
 //getMag(): gets magnetometer data
 //beginBaro(): starts the barometer
 //getBaro(): gets the barometer data
 
-//GENERIC I2C FUNCTIONS
-//testSensor(): gives the sensor a WHOAMI test
-//readSensor(): reads the sensor data
-//read16(): gets uint_16t over I2C
-//readS16(): gets int_16t over I2C
-//read16_LE(): gets unit_16t over I2C where the LSB is first
-//read16_LE(): gets int_16t over I2C wehre the LSB is first
-//read8(): gets a byte over I2C
-//readS8(): gets a signed byte over I2C
-//write8(): writes a byte to the slave device over I2C
-
 //SENSOR SPECIFIC FUNCTIONS
-//beginLSM303: starts sensor
+//beginLSM303_A(): starts accelerometer
+//beginLSM303_M(): starts magnetometer
 //getLSM303_A(): gets accelerometer data
 //getLSM303_M(): gets magnetometer data
 
 //beginL3GD20H(): starts sensor
 //getL3GS20H(): gets gyro data
 
-//beginLSM9DS1(): starts sensor
+//beginLSM9DS1_AG(): starts accelerometer & gyro
+//beginLSM9DS1_M(): starts magnetometer
 //getLSM9DS1_A(): gets accelerometer data
 //getLSM9DS1_G(): gets gyro data
 //getLSM9DS1_AG(): gets accelerometer & gyro data
-//getLSM9DS1_M(): gets accelerometer data
+//getLSM9DS1_M(): gets magnetometer data
+
+//beginLSM6DS33(): starts sensor
+//getLSM6DS33_A(): gets accelerometer data
+//getLSM6DS33_G(): gets gyro data
+//getLSM6DS33_AG(): gets accelerometer & gyro data
+
+//beginLIS3MDL(): starts sensor
+//getLIS3MDL(): gets magnetometer data
 
 //beginH3LIS331DL(): starts sensor
-//getH3LIS331DL(): gets accelerometer data
+//getH3LIS331DL(): gets high-G accelerometer data
 
 //beginADS1115(): starts ADC
 //getADS1115(): gets acelerometer data from ADXL377
@@ -66,34 +92,17 @@
 //getMPL3115A2(): reads sensor data
 //pressureToAltitude(): converts pressure to altitude
 
-//beginMS5611(): starts sensor
-//readPromMS5611(): gets the calibration settings in PROM
-//getMS5611(): gets sensor data and manages the readings between temp and press
-//readMS5611(): manages the I2C bus speed before calling I2C helper functions
-//CmdMS56111(): helper function to send commands
-//ConvertTempMS5611(): converts temperature
-//ConvertPressMS5611(): converts pressure
-//----------------------------
-//Written by SparkyVT, TRA #12111, NAR #85720, L3
-//Sensor Package 1: LSM303DLHC, L3GD20, BMP180, ADS1115, ADXL377
-//Sensor Package 2: LSM9DS1, MPL3115A2, H3LIS331DL
-//Sensor Package 3: LSM9DS1, MPL3115A2, ADXL377
-//Sensor Package 4: LSM9DS1, MS5611, H3LIS331DL
-//-----------Change Log------------
-//26 Nov 17: Version 1 created to support Adafruit 10Dof board
-//10 Nov 18: Version 2 created to support new sensor package
-//30 Apr 19: Version 3 created to support MPL3115A2 after EMI problems with BMP280 & BMP388
-//31 Jan 20: Version 4 created to support all coded sensors and all orientations
-//29 Oct 20: Added code for MS5611 sensor
-//04 AUG 21: Added variable gain for LSM9DS1 accelerometer
-//10 Aug 21: Removed variable gain after testing showed no expected improvement
-//12 NOV 21: Corrected MS5611 bugs and added SPI support for H3LIS331DL
-//--------Supported Sensors---------
-//Accelerometers/Magnetometers:LSM303, LSM9DS1
-//High-G Accelerometers: H3LIS331DL, ADS115 & ADXL377 Combo, ADXL377 & Teensy3.5 ADC combo
-//Gyroscopes: L3GD20H, LSM9DS1
-//Barometric: BMP180, BMP280, BMP388, MPL3115A2, MS5611
+//beginMS56XX(): starts sensor
+//readPromMS56XX(): gets the calibration settings in PROM
+//getMS56XX(): gets sensor data and manages the readings between temp and press
+//readMS56XX(): manages the I2C bus speed before calling I2C helper functions
+//CmdMS56XX1(): helper function to send commands
+//ConvertTempMS56XX(): converts temperature
+//ConvertPressMS56XX(): converts pressure
 
+//***************************************************************************
+//Generic Sensor Begin & Read Statements
+//***************************************************************************
 //***************************************************************************
 //Generic Sensor Begin & Read Statements
 //***************************************************************************
@@ -102,11 +111,15 @@ void beginAccel() {
   switch (sensors.accel) {
 
     case 2:
-      sensors.status_LSM9DS1 = beginLSM9DS1(16);
+      sensors.status_LSM9DS1 = beginLSM9DS1_AG();
+      break;
+
+    case 3:
+      sensors.status_LSM6DS33 = beginLSM6DS33();
       break;
 
     case 1:
-      sensors.status_LSM303 = beginLSM303(16);
+      sensors.status_LSM303 = beginLSM303_A();
       break;
   }
 }
@@ -117,8 +130,21 @@ void getAccel() {
   switch (sensors.accel) {
 
     case 2:
-      if (events.liftoff) {getLSM9DS1_AG();}
-      else {getLSM9DS1_A();}
+      if (events.liftoff) {
+        getLSM9DS1_AG();
+      }
+      else {
+        getLSM9DS1_A();
+      }
+      break;
+
+    case 3:
+      if (events.liftoff) {
+        getLSM6DS33_AG();
+      }
+      else {
+        getLSM6DS33_A();
+      }
       break;
 
     case 1:
@@ -132,93 +158,89 @@ void getAccel() {
   accel.rawZ -= accel.biasZ;
 
   //orient sensor data
-  accel.x = *accel.ptrX * *accel.ptrXdir;
-  accel.y = *accel.ptrY * *accel.ptrYdir;
-  accel.z = *accel.ptrZ * *accel.ptrZdir;
+  accel.x = *accel.ptrX * *accel.ptrXsign;
+  accel.y = *accel.ptrY * *accel.ptrYsign;
+  accel.z = *accel.ptrZ * *accel.ptrZsign;
 }
 
-void setMagGain(boolean magSwitch){
-  #define LSM9DS1_ADDRESS_MAG           (0x1E)
-  #define LSM9DS1_REGISTER_CTRL_REG2_M  (0x21)
-  #define LSM303_ADDRESS_MAG            (0x3C >> 1)
-  #define LSM303_REGISTER_MAG_CRB_REG_M (0x01)
-  #define LSM303_MAGGAIN_1_3            (0x20)
-  
-  switch (sensors.accel) {
+void beginMag() {
+
+  switch (sensors.mag) {
+
+    case 1:
+      beginLSM303_M();
+      break;
+
+    case 2:
+      beginLSM9DS1_M();
+      break;
+
+    case 3:
+      beginLIS3MDL();
+      break;
+
+    default:
+      break;
+  }
+}
+
+void resetMagGain() {
+
+  //The highest sensitivity produces false positives when using the magnetometer as a switch, so we need to reduce the gain
+#define LSM9DS1_ADDRESS_MAG           (0x1E)
+#define LSM9DS1_REGISTER_CTRL_REG2_M  (0x21)
+#define LSM303_ADDRESS_MAG            (0x3C >> 1)
+#define LSM303_REGISTER_MAG_CRB_REG_M (0x01)
+#define LSM303_MAGGAIN_1_3            (0x20)
+#define LIS3MDL_ADDRESS_MAG           (0x3C)
+#define LIS3MDL_REGISTER_CTRL_REG2    (0x21)
+
+  switch (sensors.mag) {
+
+    case 3: //LIS3MDL
+      //setup the bus
+      setActiveBus(sensors.magBusType, bus.magWire, bus.magRate, LIS3MDL_ADDRESS_MAG | 0x01, bus.magSPI, bus.magSet, pins.magCS);
+      //Set gain to 8 Gauss
+      write8(LIS3MDL_REGISTER_CTRL_REG2, 0b00100000);
+      break;
 
     case 2: //LSM9DS1
-      
-      if(magSwitch){
-        //Set gain to 8 Gauss
-        write8(LSM9DS1_REGISTER_CTRL_REG2_M, LSM9DS1_ADDRESS_MAG, 0b00100000);
-        //Set mag trigger
-        magTrigger = 3000;
-        //correct the bias
-        mag.biasX /= 2;
-        mag.biasY /= 2;
-        mag.biasZ /= 2;
-        //clear the buffer
-        getMag();
-        delay(100);
-        getMag();}
-      
-      else{
-        //Set gain to 4 Gauss
-        write8(LSM9DS1_REGISTER_CTRL_REG2_M, LSM9DS1_ADDRESS_MAG, 0x00);
-        //Set mag trigger
-        magTrigger = 6000;
-        //Reset the bias
-        calUnion.calByte[0]=EEPROM.read(eeprom.magBiasX); calUnion.calByte[1]=EEPROM.read(eeprom.magBiasX+1);
-        mag.biasX = calUnion.calValue;
-        calUnion.calByte[0]=EEPROM.read(eeprom.magBiasY); calUnion.calByte[1]=EEPROM.read(eeprom.magBiasY+1);
-        mag.biasY = calUnion.calValue;
-        calUnion.calByte[0]=EEPROM.read(eeprom.magBiasZ); calUnion.calByte[1]=EEPROM.read(eeprom.magBiasZ+1);
-        mag.biasZ = calUnion.calValue;
-        //clear the buffer
-        getMag();
-        delay(100);
-        getMag();}
+      //setup the bus
+      setActiveBus(sensors.magBusType, bus.magWire, bus.magRate, LSM9DS1_ADDRESS_MAG, bus.magSPI, bus.magSet, pins.magCS);
+      //Set gain to 8 Gauss
+      write8(LSM9DS1_REGISTER_CTRL_REG2_M, 0b00100000);
       break;
 
     case 1: //LSM303
-      
-      if(magSwitch){
-        //Set gain to 8 Gauss
-        write8(LSM303_REGISTER_MAG_CRB_REG_M, LSM303_ADDRESS_MAG, 0b11100000);
-        //Set mag trigger
-        magTrigger = 3000;
-        //correct the bias
-        mag.biasX /= 2;
-        mag.biasY /= 2;
-        mag.biasZ /= 2;
-        //clear the buffer
-        getMag();
-        delay(100);
-        getMag();}    
-        
-        else{
-          //Set gain to 4 Gauss
-          write8(LSM303_REGISTER_MAG_CRB_REG_M, LSM303_ADDRESS_MAG, LSM303_MAGGAIN_1_3);
-          //Set mag trigger
-          magTrigger = 6000;
-          //Reset the bias
-          calUnion.calByte[0]=EEPROM.read(eeprom.magBiasX); calUnion.calByte[1]=EEPROM.read(eeprom.magBiasX+1);
-          mag.biasX = calUnion.calValue;
-          calUnion.calByte[0]=EEPROM.read(eeprom.magBiasY); calUnion.calByte[1]=EEPROM.read(eeprom.magBiasY+1);
-          mag.biasY = calUnion.calValue;
-          calUnion.calByte[0]=EEPROM.read(eeprom.magBiasZ); calUnion.calByte[1]=EEPROM.read(eeprom.magBiasZ+1);
-          mag.biasZ = calUnion.calValue;
-          //clear the buffer
-        getMag();
-        delay(100);
-        getMag();}
-      
-      break;}}
+      //setup the bus
+      setActiveBus(sensors.magBusType, bus.magWire, bus.magRate, LSM303_ADDRESS_MAG, bus.magSPI, bus.magSet, pins.magCS);
+      //Set gain to 8 Gauss
+      write8(LSM303_REGISTER_MAG_CRB_REG_M, 0b11100000);
+      break;
+  }
+
+  //Set mag trigger
+  magTrigger = 3000;
+
+  //correct the bias
+  mag.biasX /= 2;
+  mag.biasY /= 2;
+  mag.biasZ /= 2;
+
+  //clear the buffer
+  getMag();
+  delay(100);
+  getMag();
+}
 
 void getMag() {
 
   //get the sensor data
   switch (sensors.accel) {
+
+    case 3:
+      getLIS3MDL();
+      break;
 
     case 2:
       getLSM9DS1_M();
@@ -235,13 +257,22 @@ void getMag() {
   mag.rawZ -= mag.biasZ;
 
   //translate sensor data
-  mag.x = *mag.ptrX * *mag.ptrXdir;
-  mag.y = *mag.ptrY * *mag.ptrYdir;
-  mag.z = *mag.ptrZ * *mag.ptrZdir;
+  mag.x = *mag.ptrX * *mag.ptrXsign;
+  mag.y = *mag.ptrY * *mag.ptrYsign;
+  mag.z = *mag.ptrZ * *mag.ptrZsign;
 }
 
 void beginGyro() {
-  if (!sensors.status_LSM9DS1) {beginL3GD20H();}
+
+  switch (sensors.gyro) {
+
+    case 1:
+      sensors.status_L3GD20H = beginL3GD20H();
+      break;
+
+    default:
+      break;
+  }
 }
 
 void getGyro() {
@@ -250,7 +281,15 @@ void getGyro() {
   switch (sensors.gyro) {
 
     case 2:
-      if (!events.liftoff) {getLSM9DS1_G();}
+      if (!events.liftoff) {
+        getLSM9DS1_G();
+      }
+      break;
+
+    case 3:
+      if (!events.liftoff) {
+        getLSM6DS33_G();
+      }
       break;
 
     case 1:
@@ -264,25 +303,31 @@ void getGyro() {
   gyro.rawZ -= gyro.biasZ;
 
   //orient sensor data
-  gyro.x = *gyro.ptrX * *gyro.ptrXdir;
-  gyro.y = *gyro.ptrY * *gyro.ptrYdir;
-  gyro.z = *gyro.ptrZ * *gyro.ptrZdir;
+  gyro.x = *gyro.ptrX * *gyro.ptrXsign;
+  gyro.y = *gyro.ptrY * *gyro.ptrYsign;
+  gyro.z = *gyro.ptrZ * *gyro.ptrZsign;
 }
 
-void beginHighG(char dataRate) {
-  
+void beginHighG() {
+
   switch (sensors.highG) {
 
+    case 0:
+      sensors.status_NoHighGAccel = true;
+      break;
+
     case 1:
-      sensors.status_ADS1115 = beginADS1115(dataRate);
+      sensors.status_ADS1115 = beginADS1115('S');
       break;
 
     case 2:
-      sensors.status_H3LIS331DL = beginH3LIS331DL(dataRate);
+      sensors.status_H3LIS331DL = beginH3LIS331DL();
       break;
 
     case 3:
-      if(!startADXL377){sensors.status_ADXL377 = beginADXL377();}
+      if (!startADXL377) {
+        sensors.status_ADXL377 = beginADXL377();
+      }
       break;
   }
 }
@@ -292,12 +337,15 @@ void getHighG(boolean fullScale) {
   switch (sensors.highG) {
 
     //get sensor data
+    case 0:
+      break;
+
     case 1:
-      getADS1115(fullScale);
+      getADS1115();
       break;
 
     case 2:
-      getH3LIS331DL(fullScale);
+      getH3LIS331DL();
       break;
 
     case 3:
@@ -311,9 +359,9 @@ void getHighG(boolean fullScale) {
   highG.rawZ -= highG.biasZ;
 
   //orient sensor data
-  highG.x = *highG.ptrX * *highG.ptrXdir;
-  highG.y = *highG.ptrY * *highG.ptrYdir;
-  highG.z = *highG.ptrZ * *highG.ptrZdir;
+  highG.x = *highG.ptrX * *highG.ptrXsign;
+  highG.y = *highG.ptrY * *highG.ptrYsign;
+  highG.z = *highG.ptrZ * *highG.ptrZsign;
 }
 
 void beginBaro() {
@@ -336,8 +384,12 @@ void beginBaro() {
       sensors.status_BMP388 = beginBMP388();
       break;
 
-    case 5: 
-      sensors.status_MS5611 = beginMS5611();
+    case 5:
+      sensors.status_MS5611 = beginMS56XX();
+      break;
+
+    case 6:
+      sensors.status_MS5607 = beginMS56XX();
       break;
   }
 }
@@ -345,6 +397,9 @@ void beginBaro() {
 void getBaro() {
 
   switch (sensors.baro) {
+
+    case 1:
+      getBMP180();
 
     case 2:
       getMPL3115A2();
@@ -358,237 +413,177 @@ void getBaro() {
       getBMP388();
       break;
 
-    case 5: 
-      getMS5611();
-      break;}
-
-}
-
-//***************************************************************************
-//Generic I2C WHOAMI Sensor Test
-//***************************************************************************
-bool testSensor(byte address) {
-
-  switch (pins.i2c) {
-
-    case 0:
-      Wire.beginTransmission(address);
-      Wire.endTransmission();
-      switch (Wire.status()) {
-        case I2C_WAITING: return true; break;
-        case I2C_ADDR_NAK: return false; break;
-        default: return false; break;
-      }
+    case 5:
+      getMS56XX();
       break;
 
-    case 1:
-      Wire1.beginTransmission(address);
-      Wire1.endTransmission();
-      switch (Wire1.status()) {
-        case I2C_WAITING: return true; break;
-        case I2C_ADDR_NAK: return false; break;
-        default: return false; break;
-      }
-      break;
-
-    case 2:
-      Wire2.beginTransmission(address);
-      Wire2.endTransmission();
-      switch (Wire2.status()) {
-        case I2C_WAITING: return true; break;
-        case I2C_ADDR_NAK: return false; break;
-        default: return false; break;
-      }
-      break;
-
-    default:
-      Wire.beginTransmission(address);
-      Wire.endTransmission();
-      switch (Wire.status()) {
-        case I2C_WAITING: return true; break;
-        case I2C_ADDR_NAK: return false; break;
-        default: return false; break;
-      }
+    case 6:
+      getMS56XX();
       break;
   }
 }
 
 //***************************************************************************
-//Generic I2C Read Sensor Data
-//***************************************************************************
-void readSensor(byte address, byte reg, byte bytes) {
-
-  //reads the data off of the specified i2c bus and places it into the buffer
-
-  switch (pins.i2c) {
-
-    case 0:
-      Wire.beginTransmission(address);
-      Wire.write(reg);
-      Wire.endTransmission(I2C_NOSTOP);
-      Wire.requestFrom(address, bytes);
-      while (Wire.available() < bytes) {};
-      for (byte i = 0; i < bytes; i++) {rawData[i] = Wire.read();}
-      break;
-
-    case 1:
-      Wire1.beginTransmission(address);
-      Wire1.write(reg);
-      Wire1.endTransmission(I2C_NOSTOP);
-      Wire1.requestFrom(address, bytes);
-      while (Wire1.available() < bytes) {};
-      for (byte i = 0; i < bytes; i++) {rawData[i] = Wire1.read();}
-      break;
-
-    case 2:
-      Wire2.beginTransmission(address);
-      Wire2.write(reg);
-      Wire2.endTransmission(I2C_NOSTOP);
-      Wire2.requestFrom(address, bytes);
-      while (Wire2.available() < bytes) {};
-      for (byte i = 0; i < bytes; i++) {rawData[i] = Wire2.read();}
-      break;
-
-    default:
-      Wire.beginTransmission(address);
-      Wire.write(reg);
-      Wire.endTransmission(I2C_NOSTOP);
-      Wire.requestFrom(address, bytes);
-      while (Wire.available() < bytes) {};
-      for (byte i = 0; i < bytes; i++) {rawData[i] = Wire.read();}
-      break;
-  }
-}
-
-//***************************************************************************
-//LSM303 Accelerometer & Magnetometer
+//LSM303 Accelerometer
 //***************************************************************************
 
-bool beginLSM303(byte accelGain) {
+bool beginLSM303_A() {
 
-  #define LSM303_ADDRESS_ACCEL               (0x32 >> 1)
-  #define LSM303_REGISTER_ACCEL_CTRL_REG4_A  (0x23)
-  #define LSM303_REGISTER_ACCEL_CTRL_REG1_A  (0x20)
-  
-  //***************************************************************************
-  //LSM303 Accelerometer
-  //***************************************************************************
+#define LSM303_ADDRESS_ACCEL               (0x32 >> 1)
+#define LSM303_REGISTER_ACCEL_CTRL_REG4_A  (0x23)
+#define LSM303_REGISTER_ACCEL_CTRL_REG1_A  (0x20)
 
+  //Define bus settings and start bus- ONLY I2C for LSM303!!
+  bus.accelRate = 400000;
+  startI2C(sensors.accelBusNum, bus.accelRate);
+  bus.accelWire = bus.activeWire;
+  bus.activeAddress = LSM303_ADDRESS_ACCEL;
+
+  //check if there is a device at this address
   if (!testSensor(LSM303_ADDRESS_ACCEL)) {
-    if (settings.testMode) {Serial.println(F("LSM303 not found!"));} 
-    return false;}
-    
-  byte id = read8(LSM303_REGISTER_ACCEL_CTRL_REG1_A | 0x80, LSM303_ADDRESS_ACCEL);
+    Serial.println(F("LSM303 Accelerometer not found!"));
+    return false;
+  }
+
+  //check whoami
+  byte id = read8(LSM303_REGISTER_ACCEL_CTRL_REG1_A | 0x80);
   if (id != 0x07) {
-    if (settings.testMode) {Serial.println(F("LSM303 not found!"));} 
-    return false;}
-  if (settings.testMode) {Serial.println(F("LSM303 OK!"));}
+    Serial.println(F("LSM303 Accelerometer not found!"));
+    return false;
+  }
+  Serial.println(F("Accel: LSM303 OK!"));
 
   //----------------------
   //CONFIGURE ACCELEROMETER
   //----------------------
   //set max ADC value
-  accel.ADCmax = (int)(0.98*2048);
-  accel.gainLevel = accelGain;
+  accel.ADCmax = (int)(0.98 * 2048);
 
   //Set accelerometer to 1300Hz ODR
-  write8(LSM303_REGISTER_ACCEL_CTRL_REG1_A, LSM303_ADDRESS_ACCEL, 0b10010111);
+  write8(LSM303_REGISTER_ACCEL_CTRL_REG1_A, 0b10010111);
 
-  switch(accelGain){
+  //Set 16G Range
+  write8(LSM303_REGISTER_ACCEL_CTRL_REG4_A, 0b00111000);
+  accel.gainX = accel.gainY = accel.gainZ = 0.012;
 
-    case 2: 
-      //Set 2G Range
-      write8(LSM303_REGISTER_ACCEL_CTRL_REG4_A, LSM303_ADDRESS_ACCEL, 0b00001000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.001;
-      break;
-      
-    case 4: 
-      //Set 4G Range
-      write8(LSM303_REGISTER_ACCEL_CTRL_REG4_A, LSM303_ADDRESS_ACCEL, 0b00011000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.002;
-      break;
-      
-    case 8:
-      //Set 8G Range
-      write8(LSM303_REGISTER_ACCEL_CTRL_REG4_A, LSM303_ADDRESS_ACCEL, 0b00101000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.004;
-      break;
-      
-    case 16:
-      //Set 16G Range
-      write8(LSM303_REGISTER_ACCEL_CTRL_REG4_A, LSM303_ADDRESS_ACCEL, 0b00111000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.012;
-      break;
-
-    default:
-      //Set 16G Range
-      write8(LSM303_REGISTER_ACCEL_CTRL_REG4_A, LSM303_ADDRESS_ACCEL, 0b00111000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.012;
-      break;}
-
-  //set G level and 
-  g = int16_t(1/accel.gainX);
+  //set G level and
+  g = int16_t(1 / accel.gainX);
   accel.gainX *= 9.80665;
   accel.gainY *= 9.80665;
   accel.gainZ *= 9.80665;
 
-  //***************************************************************************
-  //LSM303 Magnetometer
-  //***************************************************************************
+  return true;
+}//end beginLSM303_A
 
-  #define LSM303_ADDRESS_MAG            (0x3C >> 1)
-  #define LSM303_REGISTER_MAG_MR_REG_M  (0x02)
-  #define LSM303_REGISTER_MAG_CRB_REG_M (0x01)
-  #define LSM303_REGISTER_MAG_CRA_REG_M (0x00)
-  #define LSM303_MAGGAIN_1_3            (0x20)
-  #define LSM303_MAGRATE_15             (0x10)
+//***************************************************************************
+//LSM303 Magnetometer
+//***************************************************************************
+boolean beginLSM303_M() {
+#define LSM303_ADDRESS_MAG            (0x3C >> 1)
+#define LSM303_REGISTER_MAG_MR_REG_M  (0x02)
+#define LSM303_REGISTER_MAG_CRB_REG_M (0x01)
+#define LSM303_REGISTER_MAG_CRA_REG_M (0x00)
+#define LSM303_MAGGAIN_1_3            (0x20)
+#define LSM303_MAGRATE_15             (0x10)
+#define LSM303_IRA_REG_M              (0x0A)
+
+  //Define bus settings and start bus - ONLY I2C for LSM303!!
+  bus.magRate = 400000;
+  startI2C(sensors.magBusNum, bus.magRate);
+  bus.magWire = bus.activeWire;
+  bus.activeAddress = LSM303_ADDRESS_MAG;
+
+  //check if there is a device at this address
+  if (!testSensor(LSM303_ADDRESS_MAG)) {
+    Serial.println(F("LSM303 Magnetometer not found!"));
+    return false;
+  }
+
+  //check whoami
+  byte id = read8(LSM303_IRA_REG_M | 0x80);
+  if (id != 0b01001000) {
+    Serial.println(F("LSM303 Magnetometer not found!"));
+    return false;
+  }
+  Serial.println(F("Mag: LSM303 OK!"));
 
   //enable magnetometer
-  write8(LSM303_REGISTER_MAG_MR_REG_M, LSM303_ADDRESS_MAG, 0x00);
+  write8(LSM303_REGISTER_MAG_MR_REG_M, 0x00);
 
   //set gain
   //_lsm303Mag_Gauss_LSB_XY = 1100;
   //_lsm303Mag_Gauss_LSB_Z  = 980;
-  write8(LSM303_REGISTER_MAG_CRB_REG_M, LSM303_ADDRESS_MAG, LSM303_MAGGAIN_1_3);
+  write8(LSM303_REGISTER_MAG_CRB_REG_M, LSM303_MAGGAIN_1_3);
   float gainX = 1100.0;
   float gainY = 1100.0;
   float gainZ = 980.0;
   mag.ADCmax = 32768;
 
-  if(mag.orientX == 'X'){mag.gainX = gainX;}
-  if(mag.orientX == 'Y'){mag.gainX = gainY;}
-  if(mag.orientX == 'Z'){mag.gainX = gainZ;}
-  if(mag.orientY == 'X'){mag.gainY = gainX;}
-  if(mag.orientY == 'Y'){mag.gainY = gainY;}
-  if(mag.orientY == 'Z'){mag.gainY = gainZ;}
-  if(mag.orientZ == 'X'){mag.gainZ = gainX;}
-  if(mag.orientZ == 'Y'){mag.gainZ = gainY;}
-  if(mag.orientZ == 'Z'){mag.gainZ = gainZ;}
+  //LSM303 has different gains for different axes so we must correct for orientation
+  if (mag.orientX == 'X') {
+    mag.gainX = gainX;
+  }
+  if (mag.orientX == 'Y') {
+    mag.gainX = gainY;
+  }
+  if (mag.orientX == 'Z') {
+    mag.gainX = gainZ;
+  }
+  if (mag.orientY == 'X') {
+    mag.gainY = gainX;
+  }
+  if (mag.orientY == 'Y') {
+    mag.gainY = gainY;
+  }
+  if (mag.orientY == 'Z') {
+    mag.gainY = gainZ;
+  }
+  if (mag.orientZ == 'X') {
+    mag.gainZ = gainX;
+  }
+  if (mag.orientZ == 'Y') {
+    mag.gainZ = gainY;
+  }
+  if (mag.orientZ == 'Z') {
+    mag.gainZ = gainZ;
+  }
 
   //set data rate to 30Hz
-  write8(LSM303_REGISTER_MAG_CRA_REG_M, LSM303_ADDRESS_MAG, 0b00010100);
+  write8(LSM303_REGISTER_MAG_CRA_REG_M, 0b00010100);
   magTime = 33333UL;
 
-  return true;}
+  return true;
+}//end beginLSM303_M
 
 void getLSM303_A() {
-  
-  #define LSM303_REGISTER_ACCEL_OUT_X_L_A  (0x28)
-  readSensor(LSM303_ADDRESS_ACCEL, (LSM303_REGISTER_ACCEL_OUT_X_L_A | 0x80), 6);
+
+#define LSM303_REGISTER_ACCEL_OUT_X_L_A  (0x28)
+  bus.activeBusType = 'I';
+  bus.activeWire = bus.accelWire;
+  bus.activeWire->setClock(bus.accelRate);
+  bus.activeAddress = LSM303_ADDRESS_ACCEL;
+  burstRead((LSM303_REGISTER_ACCEL_OUT_X_L_A | 0x80), 6);
+
   //get the timestamp
   fltTime.tmClockPrev = fltTime.tmClock;
   fltTime.tmClock = micros();
   //assemble the data
   accel.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
   accel.rawY = (int16_t)(rawData[2] | (rawData[3] << 8)) >> 4;
-  accel.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;}
+  accel.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;
+}
 
 void getLSM303_M() {
-  #define LSM303_REGISTER_MAG_OUT_X_H_M  (0x03)
-  readSensor(LSM303_ADDRESS_MAG, LSM303_REGISTER_MAG_OUT_X_H_M, 6);
+#define LSM303_REGISTER_MAG_OUT_X_H_M  (0x03)
+  bus.activeBusType = 'I';
+  bus.activeWire = bus.magWire;
+  bus.activeWire->setClock(bus.magRate);
+  bus.activeAddress = LSM303_ADDRESS_MAG;
+  burstRead(LSM303_REGISTER_MAG_OUT_X_H_M, 6);
   mag.rawX = (int16_t)(rawData[1] | ((int16_t)rawData[0] << 8));
   mag.rawY = (int16_t)(rawData[3] | ((int16_t)rawData[2] << 8));
-  mag.rawZ = (int16_t)(rawData[5] | ((int16_t)rawData[4] << 8));}
+  mag.rawZ = (int16_t)(rawData[5] | ((int16_t)rawData[4] << 8));
+}
 
 //***************************************************************************
 //L3GD20 Gyroscope
@@ -601,45 +596,66 @@ bool beginL3GD20H() {
 #define GYRO_REGISTER_CTRL2      0x21
 #define GYRO_REGISTER_CTRL_REG4  0x23
 
-  if (!testSensor(L3GD20_ADDRESS)) {
-    if (settings.testMode) {
-      Serial.println(F("L3GD20H not found!"));
-    } return false;
+  //Define bus settings and start bus
+  if (sensors.gyroBusType == 'I') {
+    bus.activeAddress = L3GD20_ADDRESS;
+    bus.gyroRate = 400000;
+    startI2C(sensors.gyroBusNum, bus.gyroRate);
+    bus.gyroWire = bus.activeWire;
   }
-  byte id = read8(GYRO_REGISTER_WHOAMI, L3GD20_ADDRESS);
+  else {
+    bus.gyroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.gyroBusNum);
+    bus.gyroSPI = bus.activeSPI;
+    bus.activeSet = bus.gyroSet;
+    bus.activeCS = pins.gyroCS;
+  }
+
+  //Check if there is a device at this address
+  if (sensors.gyroBusType == 'I') {
+    if (!testSensor(L3GD20_ADDRESS)) {
+      Serial.println(F("L3GD20H not found!"));
+      return false;
+    }
+  }
+
+  //check whoami
+  byte id = read8(GYRO_REGISTER_WHOAMI);
   if (id != 0xD4 && id != 0xD7) {
-    if (settings.testMode) {
-      Serial.println(F("L3GD20H not found!"));
-    } return false;
+    Serial.println(F("L3GD20H not found!"));
+    return false;
   }
-  if (settings.testMode) {
-    Serial.println(F("L3GD20H OK!"));
-  }
+  Serial.println(F("Gyro: L3GD20H OK!"));
 
   //reset then enable
-  write8(GYRO_REGISTER_CTRL_REG1, L3GD20_ADDRESS, 0x00);
-  write8(GYRO_REGISTER_CTRL_REG1, L3GD20_ADDRESS, 0x0F);
+  write8(GYRO_REGISTER_CTRL_REG1, 0x00);
+  write8(GYRO_REGISTER_CTRL_REG1, 0x0F);
 
   //set gain
-  write8(GYRO_REGISTER_CTRL_REG4, L3GD20_ADDRESS, 0x20);
+  write8(GYRO_REGISTER_CTRL_REG4, 0x20);
   gyro.gainX = gyro.gainY = gyro.gainZ = 0.07;
   gyro.ADCmax = 32768;
 
-  //set data rate 800Hz
-  write8(GYRO_REGISTER_CTRL_REG1, L3GD20_ADDRESS, 0xdf);
-
-  //configure high-pass filter
-  //write8(GYRO_REGISTER_CTRL2, L3GD20_ADDRESS, 0b00010001);
+  //set data rate 760Hz: 11, 50Hz Bandwidth:01, normal mode, all axes enabled:0b11011111
+  write8(GYRO_REGISTER_CTRL_REG1, 0xDF);
 
   return true;
 }
 
 void getL3GD20H() {
+
 #define GYRO_REGISTER_OUT_X_L (0x28)
-  readSensor(L3GD20_ADDRESS, (GYRO_REGISTER_OUT_X_L | 0x80), 6);
+
+  //setup the bus
+  setActiveBus(sensors.gyroBusType, bus.gyroWire, bus.gyroRate, L3GD20_ADDRESS, bus.gyroSPI, bus.gyroSet, pins.gyroCS);
+
+  //read the data
+  burstRead((GYRO_REGISTER_OUT_X_L | 0x80), 6);
+
   //Capture current timestamp
   fltTime.gyroClockPrev = fltTime.gyroClock;
   fltTime.gyroClock = micros();
+
   //Assemble the data
   gyro.rawX = (int16_t)(rawData[0] | (rawData[1] << 8));
   gyro.rawY = (int16_t)(rawData[2] | (rawData[3] << 8));
@@ -647,104 +663,122 @@ void getL3GD20H() {
 }
 
 //***************************************************************************
-//LSM9DS1 Accelerometer, Gyroscope, & Magnetometer
+//LSM9DS1 Accelerometer & Gyroscope
 //***************************************************************************
-bool beginLSM9DS1(byte accelGain) {
+bool beginLSM9DS1_AG() {
 
   //Addresses for the registers
-  #define LSM9DS1_ADDRESS_ACCELGYRO          (0x6B)
-  #define LSM9DS1_ADDRESS_MAG                (0x1E)
-  #define LSM9DS1_XG_ID                      (0b01101000)
-  #define LSM9DS1_MAG_ID                     (0b00111101)
-  #define LSM9DS1_REGISTER_CTRL_REG1_G         (0x10)
-  #define LSM9DS1_REGISTER_CTRL_REG5_XL        (0x1F)
-  #define LSM9DS1_REGISTER_CTRL_REG6_XL        (0x20)
-  #define LSM9DS1_REGISTER_CTRL_REG1_M         (0x20)
-  #define LSM9DS1_REGISTER_CTRL_REG2_M         (0x21)
-  #define LSM9DS1_REGISTER_CTRL_REG3_M         (0x22)
-  #define LSM9DS1_REGISTER_CTRL_REG4_M         (0x23)
-  #define LSM9DS1_REGISTER_CTRL_REG3_G         (0x12)
+#define LSM9DS1_ADDRESS_ACCELGYRO          (0x6B)
+#define LSM9DS1_XG_ID                      (0b01101000)
+#define LSM9DS1_REGISTER_CTRL_REG1_G         (0x10)
+#define LSM9DS1_REGISTER_CTRL_REG5_XL        (0x1F)
+#define LSM9DS1_REGISTER_CTRL_REG6_XL        (0x20)
+#define LSM9DS1_REGISTER_CTRL_REG3_G         (0x12)
 
-  //----------------------
-  //GET WHO AM I REGISTERS
-  //----------------------
-  if (!testSensor(LSM9DS1_ADDRESS_ACCELGYRO)) {
-    if (settings.testMode) {Serial.println(F("LSM9DS1 not found!"));} 
-    return false;}
-    
-  byte id = read8(0x0F, LSM9DS1_ADDRESS_ACCELGYRO);
+  //Define bus settings and start bus
+  if (sensors.accelBusType == 'I') {
+    bus.activeAddress = LSM9DS1_ADDRESS_ACCELGYRO;
+    bus.accelRate = bus.gyroRate = 400000;
+    startI2C(sensors.accelBusNum, bus.accelRate);
+    bus.accelWire = bus.gyroWire = bus.activeWire;
+  }
+  else {
+    bus.accelSet = bus.gyroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.accelBusNum);
+    bus.accelSPI = bus.gyroSPI = bus.activeSPI;
+    bus.activeSet = bus.accelSet;
+    bus.activeCS = pins.accelCS;
+  }
+
+  //if I2C, check if there is a sensor at this address
+  if (sensors.accelBusType == 'I') {
+    if (!testSensor(LSM9DS1_ADDRESS_ACCELGYRO)) {
+      Serial.println(F("LSM9DS1 not found!"));
+      return false;
+    }
+  }
+
+  //check whoami
+  byte id = read8(0x0F);
   if (id != 0b01101000) {
-    if (settings.testMode) {Serial.println(F("LSM9DS1 not found!"));} 
-    return false;}
-    
-  if (settings.testMode) {Serial.println(F("LSM9DS1 OK!"));}
+    Serial.println(F("LSM9DS1 not found!"));
+    return false;
+  }
+  Serial.println(F("LSM9DS1 OK!"));
 
-  //----------------------
-  //CONFIGURE ACCELEROMETER
-  //----------------------
-  accel.ADCmax = (int16_t)(0.98*32768);
-  accel.gainLevel = accelGain;
+  //Set Accelerometer 16G Range, 952 Hz ODR
+  write8(LSM9DS1_REGISTER_CTRL_REG6_XL, 0b11001000);
+  accel.ADCmax = (int16_t)(0.98 * 32768);
+  accel.gainX = accel.gainY = accel.gainZ = 0.000735;
 
-  switch(accelGain){
-
-    case 2: 
-      //Set 2G Range, 952 Hz ODR
-      write8(LSM9DS1_REGISTER_CTRL_REG6_XL, LSM9DS1_ADDRESS_ACCELGYRO,  0b11000000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.000061;
-      break;
-      
-    case 4: 
-      //Set 4G Range, 952 Hz ODR
-      write8(LSM9DS1_REGISTER_CTRL_REG6_XL, LSM9DS1_ADDRESS_ACCELGYRO,  0b11010000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.000122;
-      break;
-      
-    case 8:
-      //Set 8G Range, 952 Hz ODR
-      write8(LSM9DS1_REGISTER_CTRL_REG6_XL, LSM9DS1_ADDRESS_ACCELGYRO,  0b11011000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.000244;
-      break;
-      
-    case 16:
-      //Set 16G Range, 952 Hz ODR
-      write8(LSM9DS1_REGISTER_CTRL_REG6_XL, LSM9DS1_ADDRESS_ACCELGYRO,  0b11001000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.000735;
-      break;
-
-    default:
-      //Set 16G Range, 952 Hz ODR
-      write8(LSM9DS1_REGISTER_CTRL_REG6_XL, LSM9DS1_ADDRESS_ACCELGYRO,  0b11001000);
-      accel.gainX = accel.gainY = accel.gainZ = 0.000735;
-      break;}
-
-  //set G level and add G to the gains
-  g = int16_t(1/accel.gainX);
-  accel.gainX *= 9.80665;
-  accel.gainY *= 9.80665;
-  accel.gainZ *= 9.80665;
-  
-  //----------------------
-  //CONFIGURE GYROSCOPE
-  //----------------------
-  //Set 2000dps Range, 952 Hz ODR
-  write8(LSM9DS1_REGISTER_CTRL_REG1_G, LSM9DS1_ADDRESS_ACCELGYRO, 0b11011000);
+  //Set Gyroscope 2000dps Range, 952 Hz ODR
+  write8(LSM9DS1_REGISTER_CTRL_REG1_G, 0b11011000);
   gyro.gainX = gyro.gainY = gyro.gainZ = 0.07;
   gyro.ADCmax = 32768;
 
-  //disable high-pass filter
-  //write8(LSM9DS1_REGISTER_CTRL_REG3_G, LSM9DS1_ADDRESS_ACCELGYRO, 0b00000000);
+  //set Accelerometer G level and add G to the gains
+  g = int16_t(1 / accel.gainX);
+  accel.gainX *= 9.80665;
+  accel.gainY *= 9.80665;
+  accel.gainZ *= 9.80665;
 
-  //----------------------
-  //CONFIGURE MAGNETOMETER
-  //----------------------
+  return true;
+}
+
+//***************************************************************************
+//LSM9DS1 Magnetometer
+//***************************************************************************
+bool beginLSM9DS1_M() {
+#define LSM9DS1_ADDRESS_MAG                (0x1E)
+#define LSM9DS1_MAG_ID                     (0b00111101)
+#define LSM9DS1_REGISTER_CTRL_REG1_M         (0x20)
+#define LSM9DS1_REGISTER_CTRL_REG2_M         (0x21)
+#define LSM9DS1_REGISTER_CTRL_REG3_M         (0x22)
+#define LSM9DS1_REGISTER_CTRL_REG4_M         (0x23)
+
+  //Define bus settings and start bus
+  if (sensors.magBusType == 'I') {
+    bus.activeAddress = LSM9DS1_ADDRESS_MAG;
+    bus.magRate = 400000;
+    startI2C(sensors.magBusNum, bus.magRate);
+    bus.magWire = bus.activeWire;
+  }
+  else {
+    bus.magSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.magBusNum);
+    bus.magSPI = bus.activeSPI;
+    bus.activeSet = bus.magSet;
+    bus.activeCS = pins.magCS;
+  }
+
+  //If I2C, check if there is a sensor at this address
+  if (sensors.magBusType == 'I') {
+    if (!testSensor(LSM9DS1_ADDRESS_MAG)) {
+      Serial.println(F("LSM9DS1 Magnetometer not found!"));
+      return false;
+    }
+  }
+
+  //check whoami
+  byte id = read8(0x0F);
+  if (id != LSM9DS1_MAG_ID) {
+    Serial.println(F("LSM9DS1 Magnetometer not found!"));
+    return false;
+  }
+  Serial.println(F("LSM9DS1 Magnetometer OK!"));
+
+
   //Mag Temp Compensation, UltraHigh Perf, 40Hz
-  write8(LSM9DS1_REGISTER_CTRL_REG1_M, LSM9DS1_ADDRESS_MAG, 0b11111000);
+  write8(LSM9DS1_REGISTER_CTRL_REG1_M, 0b11111000);
   //Set gain to 4 Gauss
-  write8(LSM9DS1_REGISTER_CTRL_REG2_M, LSM9DS1_ADDRESS_MAG, 0x00);
+  write8(LSM9DS1_REGISTER_CTRL_REG2_M, 0x00);
   //Mag Continuous Conversion
-  write8(LSM9DS1_REGISTER_CTRL_REG3_M, LSM9DS1_ADDRESS_MAG, 0x00);
+  write8(LSM9DS1_REGISTER_CTRL_REG3_M, 0x00);
   //Mag Reverse Magnetometer MSB / LSB Order, Z-Axis high-perf mode
-  write8(LSM9DS1_REGISTER_CTRL_REG4_M, LSM9DS1_ADDRESS_MAG, 0b00001100);
+  write8(LSM9DS1_REGISTER_CTRL_REG4_M, 0b00001100);
+
+  //set gains
+  mag.gainX = mag.gainY = mag.gainZ = (float)(0.14 / 1000);
 
   return true;
 }//end begin
@@ -752,26 +786,39 @@ bool beginLSM9DS1(byte accelGain) {
 void getLSM9DS1_AG() {
 
   //this routine uses the LSM9DS1 burst read to rapidly read 12 bytes from the sensors
-  #define LSM9DS1_REGISTER_OUT_X_L_XL (0x28)
-  #define LSM9DS1_REGISTER_OUT_X_L_G  (0x18)
+#define LSM9DS1_REGISTER_OUT_X_L_XL (0x28)
+#define LSM9DS1_REGISTER_OUT_X_L_G  (0x18)
 
   //Capture current timestamp
   fltTime.gyroClockPrev = fltTime.gyroClock;
   fltTime.tmClockPrev = fltTime.tmClock;
   fltTime.gyroClock = fltTime.tmClock = micros();
 
-  readSensor(LSM9DS1_ADDRESS_ACCELGYRO, LSM9DS1_REGISTER_OUT_X_L_G, 12);
+  //setup the bus
+  setActiveBus(sensors.accelBusType, bus.accelWire, bus.accelRate, LSM9DS1_ADDRESS_ACCELGYRO, bus.accelSPI, bus.accelSet, pins.accelCS);
+
   //read the data
+  burstRead(LSM9DS1_REGISTER_OUT_X_L_G, 12);
+
+  //assemble the data
   gyro.rawX = (int16_t)(rawData[0] | (rawData[1] << 8));
   gyro.rawY = (int16_t)(rawData[2] | (rawData[3] << 8));
   gyro.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8));
   accel.rawX  = (int16_t)(rawData[6] | (rawData[7] << 8));
   accel.rawY  = (int16_t)(rawData[8] | (rawData[9] << 8));
-  accel.rawZ  = (int16_t)(rawData[10] | (rawData[11] << 8));}
+  accel.rawZ  = (int16_t)(rawData[10] | (rawData[11] << 8));
+}
 
 void getLSM9DS1_A() {
- #define LSM9DS1_REGISTER_OUT_X_L_XL (0x28)
-  readSensor(LSM9DS1_ADDRESS_ACCELGYRO, 0x80 | LSM9DS1_REGISTER_OUT_X_L_XL, 6);
+
+  //This routine reads 6 bytes only from the accelerometer
+#define LSM9DS1_REGISTER_OUT_X_L_XL (0x28)
+
+  //setup the bus
+  setActiveBus(sensors.accelBusType, bus.accelWire, bus.accelRate, LSM9DS1_ADDRESS_ACCELGYRO, bus.accelSPI, bus.accelSet, pins.accelCS);
+
+  //read the data
+  burstRead(0x80 | LSM9DS1_REGISTER_OUT_X_L_XL, 6);
 
   //Capture current timestamp
   fltTime.gyroClockPrev = fltTime.gyroClock;
@@ -781,20 +828,240 @@ void getLSM9DS1_A() {
 
   accel.rawX = (int16_t)(rawData[0] | (rawData[1] << 8));
   accel.rawY = (int16_t)(rawData[2] | (rawData[3] << 8));
-  accel.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8));}
+  accel.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8));
+}
 
 void getLSM9DS1_G() {
-  #define LSM9DS1_REGISTER_OUT_X_L_G  (0x18)
-  readSensor(LSM9DS1_ADDRESS_ACCELGYRO, 0x80 | LSM9DS1_REGISTER_OUT_X_L_G, 6);
 
+  //This routine reads 6 bytes only from the gyro
+#define LSM9DS1_REGISTER_OUT_X_L_G  (0x18)
+
+  //setup the bus
+  setActiveBus(sensors.gyroBusType, bus.gyroWire, bus.gyroRate, LSM9DS1_ADDRESS_ACCELGYRO, bus.gyroSPI, bus.gyroSet, pins.gyroCS);
+
+  //read the data
+  burstRead(0x80 | LSM9DS1_REGISTER_OUT_X_L_G, 6);
+
+  //assemble the data
   gyro.rawX  = (int16_t)(rawData[0] | (rawData[1] << 8));
   gyro.rawY  = (int16_t)(rawData[2] | (rawData[3] << 8));
-  gyro.rawZ  = (int16_t)(rawData[4] | (rawData[5] << 8));}
+  gyro.rawZ  = (int16_t)(rawData[4] | (rawData[5] << 8));
+}
 
 void getLSM9DS1_M() {
-  #define LSM9DS1_REGISTER_OUT_X_L_M  (0x28)
-  readSensor(LSM9DS1_ADDRESS_MAG, 0x80 | LSM9DS1_REGISTER_OUT_X_L_M, 6);
 
+  //This routine reads 6 bytes from the magnetometer
+#define LSM9DS1_REGISTER_OUT_X_L_M  (0x28)
+
+  //setup the bus
+  setActiveBus(sensors.magBusType, bus.magWire, bus.magRate, LSM9DS1_ADDRESS_MAG, bus.magSPI, bus.magSet, pins.magCS);
+
+  //read the data
+  burstRead(0x80 | LSM9DS1_REGISTER_OUT_X_L_M, 6);
+
+  //assemble the data
+  mag.rawX  = (int16_t)(rawData[0] | (rawData[1] << 8));
+  mag.rawY  = (int16_t)(rawData[2] | (rawData[3] << 8));
+  mag.rawZ  = (int16_t)(rawData[4] | (rawData[5] << 8));
+}
+
+//***************************************************************************
+//LSM6DS33 Accelerometer & Gyroscope
+//***************************************************************************
+bool beginLSM6DS33() {
+
+  //Addresses for the registers
+#define LSM6DS33_ADDRESS_ACCELGYRO            (0xD6)
+#define LSM6DS33_WHOAMI                       (0x0F)
+#define LSM6DS33_REGISTER_CTRL1_XL            (0x10)
+#define LSM6DS33_REGISTER_CTRL2_G             (0x11)
+
+  //Define bus settings and start bus
+  if (sensors.accelBusType == 'I') {
+    bus.activeAddress = LSM6DS33_ADDRESS_ACCELGYRO;
+    bus.accelRate = bus.gyroRate = 400000;
+    startI2C(sensors.accelBusNum, bus.accelRate);
+    bus.accelWire = bus.gyroWire = bus.activeWire;
+  }
+  else {
+    bus.accelSet = bus.gyroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.accelBusNum);
+    bus.accelSPI = bus.gyroSPI = bus.activeSPI;
+    bus.activeSet = bus.accelSet;
+    bus.activeCS = pins.accelCS;
+  }
+
+  //if I2C, check if there is a sensor at this address
+  if (sensors.accelBusType == 'I') {
+    if (!testSensor(LSM6DS33_ADDRESS_ACCELGYRO)) {
+      Serial.println(F("LSM9DS1 not found!"));
+      return false;
+    }
+  }
+
+  //check whoami
+  byte id = read8(LSM6DS33_WHOAMI);
+  if (id != 0b01101001) {
+    Serial.println(F("LSM9DS1 not found!"));
+    return false;
+  }
+  Serial.println(F("LSM9DS1 OK!"));
+
+  //CTRL_REG1_ODR: 10000 = 1.66kHz, 1001 = 3.33kHz, 1010 = 6.66kHz
+  //CTRL_REG1_FS: 00 = 2G, 01 = 16G, 10 = 4G, 11 = 8G
+  //CTRL_REG1_BW: 00 = 400Hz, 01 = 200Hz, 10 = 100Hz, 11 = 50Hz
+  //Accelerometer set 16G Range, 3.33kHz ODR, 400Hz BW
+  write8(LSM6DS33_REGISTER_CTRL1_XL, 0b10010100);
+  accel.gainX = accel.gainY = accel.gainZ = 0.000488;
+  accel.ADCmax = (int16_t)(0.98 * 32768);
+
+  //Gyroscope set 2000dps Range, 1.66kHz ODR
+  write8(LSM6DS33_REGISTER_CTRL2_G, 0b10001100);
+  gyro.gainX = gyro.gainY = gyro.gainZ = 0.07;
+  gyro.ADCmax = 32768;
+
+  //Set G level and add G to the gains
+  g = int16_t(1 / accel.gainX);
+  accel.gainX *= 9.80665;
+  accel.gainY *= 9.80665;
+  accel.gainZ *= 9.80665;
+
+  return true;
+}//end begin
+
+void getLSM6DS33_AG() {
+
+  //this routine uses the LSM9DS1 burst read to rapidly read 12 bytes from the sensors
+#define LSM6DS33_REGISTER_OUTX_L_G (0x22)
+
+  //Capture current timestamp
+  fltTime.gyroClockPrev = fltTime.gyroClock;
+  fltTime.tmClockPrev = fltTime.tmClock;
+  fltTime.gyroClock = fltTime.tmClock = micros();
+
+  //setup the bus
+  setActiveBus(sensors.accelBusType, bus.accelWire, bus.accelRate, LSM6DS33_ADDRESS_ACCELGYRO | 0x01, bus.accelSPI, bus.accelSet, pins.accelCS);
+
+  //read the data
+  burstRead(LSM6DS33_REGISTER_OUTX_L_G, 12);
+
+  //assemble the data
+  gyro.rawX = (int16_t)(rawData[0] | (rawData[1] << 8));
+  gyro.rawY = (int16_t)(rawData[2] | (rawData[3] << 8));
+  gyro.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8));
+  accel.rawX  = (int16_t)(rawData[6] | (rawData[7] << 8));
+  accel.rawY  = (int16_t)(rawData[8] | (rawData[9] << 8));
+  accel.rawZ  = (int16_t)(rawData[10] | (rawData[11] << 8));
+}
+
+void getLSM6DS33_A() {
+
+  //This routine reads 6 bytes only from the accelerometer
+#define LSM6DS33_REGISTER_OUTX_L_XL (0x28)
+
+  //Capture current timestamp
+  fltTime.gyroClockPrev = fltTime.gyroClock;
+  fltTime.tmClockPrev = fltTime.tmClock;
+  fltTime.tmClock = fltTime.gyroClock = micros();
+
+  //setup the bus
+  setActiveBus(sensors.accelBusType, bus.accelWire, bus.accelRate, LSM6DS33_ADDRESS_ACCELGYRO | 0x01, bus.accelSPI, bus.accelSet, pins.accelCS);
+
+  //read the data
+  burstRead(LSM6DS33_REGISTER_OUTX_L_G, 6);
+
+  //assemble the data
+  accel.rawX = (int16_t)(rawData[0] | (rawData[1] << 8));
+  accel.rawY = (int16_t)(rawData[2] | (rawData[3] << 8));
+  accel.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8));
+}
+
+void getLSM6DS33_G() {
+
+  //routine is only used for calibration purposes so no timestamp is needed
+#define LSM6DS33_REGISTER_OUTX_L_G (0x22)
+
+  //setup the bus
+  setActiveBus(sensors.gyroBusType, bus.gyroWire, bus.gyroRate, LSM6DS33_ADDRESS_ACCELGYRO | 0x01, bus.gyroSPI, bus.gyroSet, pins.gyroCS);
+
+  //read the data
+  burstRead(LSM6DS33_REGISTER_OUTX_L_G, 6);
+
+  //assemble the data
+  gyro.rawX  = (int16_t)(rawData[0] | (rawData[1] << 8));
+  gyro.rawY  = (int16_t)(rawData[2] | (rawData[3] << 8));
+  gyro.rawZ  = (int16_t)(rawData[4] | (rawData[5] << 8));
+}
+
+//***************************************************************************
+//LIS3MDL Magnetometer
+//***************************************************************************
+bool beginLIS3MDL() {
+
+  //Addresses for the registers
+#define LIS3MDL_ADDRESS_MAG                  (0x3C)
+#define LIS3MDL_WHOAMI                       (0x0F)
+#define LIS3MDL_REGISTER_CTRL_REG1           (0x20)
+#define LIS3MDL_REGISTER_CTRL_REG2           (0x21)
+#define LIS3MDL_REGISTER_CTRL_REG3           (0x22)
+#define LIS3MDL_REGISTER_CTRL_REG4           (0x23)
+
+  //Define bus settings and start bus
+  if (sensors.magBusType == 'I') {
+    bus.activeAddress = LIS3MDL_ADDRESS_MAG;
+    bus.magRate = 400000;
+    startI2C(sensors.magBusNum, bus.magRate);
+    bus.magWire = bus.activeWire;
+  }
+  else {
+    bus.magSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.magBusNum);
+    bus.magSPI = bus.activeSPI;
+    bus.activeSet = bus.magSet;
+    bus.activeCS = pins.magCS;
+  }
+
+  //If I2C, check to see if there is a sensor at this address
+  if (sensors.magBusType == 'I') {
+    if (!testSensor(LIS3MDL_ADDRESS_MAG | 0x01)) {
+      Serial.println(F("LIS3MDL not found!"));
+      return false;
+    }
+  }
+
+  //check whoami
+  byte id = read8(LIS3MDL_WHOAMI);
+  if (id != 0b00111101) {
+    Serial.println(F("LIS3MDL not found!"));
+    return false;
+  }
+  Serial.println(F("LIS3MDL OK!"));
+
+  //Temp Sensor Off, UltraHigh Perf, 40Hz
+  write8(LIS3MDL_REGISTER_CTRL_REG1, 0b01111000);
+
+  //Set gain to 4 Gauss
+  write8(LIS3MDL_REGISTER_CTRL_REG2, 0x00);
+
+  //Mag Continuous Conversion
+  write8(LIS3MDL_REGISTER_CTRL_REG3, 0x00);
+
+  //Mag Reverse Magnetometer MSB / LSB Order, Z-Axis high-perf mode
+  write8(LIS3MDL_REGISTER_CTRL_REG3, 0b00001100);
+
+  return true;
+}//end begin
+
+void getLIS3MDL() {
+#define LIS3MDL_REGISTER_OUT_X_L  (0x28)
+
+  //setup the bus
+  setActiveBus(sensors.magBusType, bus.magWire, bus.magRate, LIS3MDL_ADDRESS_MAG | 0x01, bus.magSPI, bus.magSet, pins.magCS);
+
+  //read data
+  burstRead(LIS3MDL_REGISTER_OUT_X_L, 6);
+
+  //assemble data
   mag.rawX  = (int16_t)(rawData[0] | (rawData[1] << 8));
   mag.rawY  = (int16_t)(rawData[2] | (rawData[3] << 8));
   mag.rawZ  = (int16_t)(rawData[4] | (rawData[5] << 8));
@@ -806,301 +1073,251 @@ void getLSM9DS1_M() {
 bool beginADXL377() {
 
   //set gain
-  highG.gainX = highG.gainY = highG.gainZ = 9.80655/129;
+  highG.gainX = highG.gainY = highG.gainZ = 9.80655 / 129;
   high1G = 129;
   sizeHighGfilter = 10;
 
   startADXL377 = true;
 
-  if (settings.testMode) {Serial.println(F("ADXL377 OK!"));}
+  Serial.println(F("ADXL377 OK!"));
   return true;
 }
 
 void getADXL377(boolean threeAxisMode) {
-  
+
   //measured time is 45 micros per reading
-  
-  const uint16_t ADCmaxValue = 65535;
   const uint16_t ADCmidValue = 32768;
-  const uint32_t ADCdataRate = 2000;
-  uint16_t val;
   long highGsumX = 0L;
   long highGsumY = 0L;
   long highGsumZ = 0L;
-  int16_t interferenceValue = 16;
-  unsigned long interferenceTime = 118020UL;
-  static boolean radioInterference = false;
-  static int16_t prevPacketNum = 0;
 
-if(threeAxisMode){
+  if (threeAxisMode) {
 
-  highGsumX = 0;
-  highGsumY = 0;
-  highGsumZ = 0;
-  
-  for(byte i = 0; i < 5; i++){
-    highGsumX += analogRead(A2);
-    highGsumY += analogRead(A3);
-    highGsumZ += analogRead(A4);}
-    
-  highG.rawX = (int16_t)((highGsumX/5) - ADCmidValue);
-  highG.rawY = (int16_t)((highGsumY/5) - ADCmidValue);
-  highG.rawZ = (int16_t)((highGsumZ/5) - ADCmidValue);}
+    highGsumX = 0;
+    highGsumY = 0;
+    highGsumZ = 0;
 
-else{
+    for (byte i = 0; i < 5; i++) {
+      highGsumX += analogRead(A2);
+      highGsumY += analogRead(A3);
+      highGsumZ += analogRead(A4);
+    }
 
-  highGsumZ = 0;
-  
-  if (highG.orientX == 'Z'){
-    for(byte i = 0; i < 5; i++){highGsumZ += analogRead(A2);}
-    highG.rawX = (int16_t)((highGsumZ/5) - ADCmidValue);}
+    highG.rawX = (int16_t)((highGsumX / 5) - ADCmidValue);
+    highG.rawY = (int16_t)((highGsumY / 5) - ADCmidValue);
+    highG.rawZ = (int16_t)((highGsumZ / 5) - ADCmidValue);
+  }
 
-  else if (highG.orientY == 'Z'){
-    for(byte i = 0; i < 5; i++){highGsumZ += analogRead(A3);}
-    highG.rawY = (int16_t)((highGsumZ/5) - ADCmidValue);}
+  else {
 
-  else if (highG.orientZ == 'Z'){
-    for(byte i = 0; i < 5; i++){highGsumZ += analogRead(A4);}
-    highG.rawZ = (int16_t)((highGsumZ/5) - ADCmidValue);}}
- 
+    highGsumZ = 0;
+
+    if (highG.orientX == 'Z') {
+      for (byte i = 0; i < 5; i++) {
+        highGsumZ += analogRead(A2);
+      }
+      highG.rawX = (int16_t)((highGsumZ / 5) - ADCmidValue);
+    }
+
+    else if (highG.orientY == 'Z') {
+      for (byte i = 0; i < 5; i++) {
+        highGsumZ += analogRead(A3);
+      }
+      highG.rawY = (int16_t)((highGsumZ / 5) - ADCmidValue);
+    }
+
+    else if (highG.orientZ == 'Z') {
+      for (byte i = 0; i < 5; i++) {
+        highGsumZ += analogRead(A4);
+      }
+      highG.rawZ = (int16_t)((highGsumZ / 5) - ADCmidValue);
+    }
+  }
+
 }//endvoid
 
 //***************************************************************************
 //H3LIS331DL High-G Accelerometer
 //***************************************************************************
 
-bool beginH3LIS331DL(char DR) {
+bool beginH3LIS331DL() {
 
-  #define H3LIS331_ADDRESS            (0x19)
-  #define H3LIS331_REGISTER_CTRL_REG1 (0x20)
-  #define H3LIS331_REGISTER_CTRL_REG2 (0x21)
-  #define H3LIS331_REGISTER_CTRL_REG4 (0x23)
-  
-  boolean i2cBus = true;
+#define H3LIS331_ADDRESS            (0x19)
+#define H3LIS331_REGISTER_CTRL_REG1 (0x20)
+#define H3LIS331_REGISTER_CTRL_REG2 (0x21)
+#define H3LIS331_REGISTER_CTRL_REG4 (0x23)
 
-  //check to see if the sensor is on i2c
-  if (!testSensor(H3LIS331_ADDRESS)) {i2cBus = false;}
+  //Define bus settings and start bus
+  if (sensors.highGBusType == 'I') {
+    bus.activeAddress = H3LIS331_ADDRESS;
+    bus.highGRate = 400000;
+    startI2C(sensors.highGBusNum, bus.highGRate);
+    bus.highGWire = bus.activeWire;
+  }
+  else {
+    bus.highGSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.highGBusNum);
+    bus.highGSPI = bus.activeSPI;
+    bus.activeSet = bus.highGSet;
+    bus.activeCS = pins.highG_CS;
+  }
 
-  //verify the whoami
-  if(i2cBus){
-    byte id = read8(0x0F, H3LIS331_ADDRESS);
-    if(settings.testMode){
-      if(id == 0b00110010){Serial.println(F("H3LIS331 OK on I2C!"));}
-      else{
-        Serial.println(F("H3LIS331 not found on I2C!"));
-        return false;}}}
+  //If I2C, check to see if there is a sensor at this address
+  if (sensors.highGBusType == 'I') {
+    if (!testSensor(H3LIS331_ADDRESS)) {
+      Serial.println(F("H3LIS331 not found!"));
+      return false;
+    }
+  }
 
-  //if its not on i2c, check SPI
-  if(!i2cBus){
-    pinMode(pins.highG_CS, OUTPUT);   
-    spiRead(0x8F, pins.highG_CS, 1);
-    byte id = rawData[0];
-    if(id == 0x32){highG.SPIbus = true;}
-    if(settings.testMode){
-      if(id != 0x32){Serial.print("H3LIS331 not found on SPI! ID: ");Serial.print(id, HEX);}
-      else{Serial.println("H3LIS331 OK on SPI");}}}
+  //check whoami
+  byte id;
+  if (sensors.highGBusType == 'I') {
+    id = read8(0x0F);
+  }
+  else {
+    id = read8(0x8F);
+  }
+  if (id != 0x32) {
+    Serial.println(F("H3LIS331 not found!"));
+    return false;
+  }
+  Serial.println(F("H3LIS331 OK!"));
+
+  //sensor setup
+  //Set 100G scale
+  write8(H3LIS331_REGISTER_CTRL_REG4, 0b00000000);
+
+  //Normal Mode (001), 1000 Hz data rate (11), Enable axes (111)
+  write8(H3LIS331_REGISTER_CTRL_REG1, 0b00111111);
 
   high1G = 21;
-  highG.gainX = highG.gainY = highG.gainZ =0.049 * 9.80655;
+  highG.gainX = highG.gainY = highG.gainZ = 0.049 * 9.80655;
   sizeHighGfilter = 15;
 
-  //Set 100G scale
-  if(!highG.SPIbus){write8(H3LIS331_REGISTER_CTRL_REG4, H3LIS331_ADDRESS, 0b00000000);}
-  else{spiWrite8(H3LIS331_REGISTER_CTRL_REG4, 0b00000000, pins.highG_CS);}
+  return true;
+}
 
-  //Normal Mode (0), High-Pass filter mode (01), Filter Data Select (1),
-  //HP Interrupt2 (0), HP Interrupt1 (0), HPF Coeff(00)
-  //write8(H3LIS331_REGISTER_CTRL_REG2, H3LIS331_ADDRESS, 0b00110000);
+void getH3LIS331DL() {
 
-  if (DR == 'F') {
-    //Normal Mode (001), 1000 Hz data rate (11), Enable axes (111)
-    if(!highG.SPIbus){write8(H3LIS331_REGISTER_CTRL_REG1, H3LIS331_ADDRESS, 0b00111111);}
-    else{spiWrite8(H3LIS331_REGISTER_CTRL_REG1, 0b00111111, pins.highG_CS);}}
-  
-  if (DR == 'M') {
-    //Normal Mode (001), 400 Hz data rate (10), Enable axes (111)
-    if(!highG.SPIbus){write8(H3LIS331_REGISTER_CTRL_REG1, H3LIS331_ADDRESS, 0b00110111);}
-    else{spiWrite8(H3LIS331_REGISTER_CTRL_REG1, 0b00110111, pins.highG_CS);}}
-    
-  if (DR == 'S') {
-    //Normal Mode (001), 100 Hz data rate (01), Enable axes (111)
-    if(!highG.SPIbus){write8(H3LIS331_REGISTER_CTRL_REG1, H3LIS331_ADDRESS, 0b00101111);}
-    else{spiWrite8(H3LIS331_REGISTER_CTRL_REG1, 0b00101111, pins.highG_CS);}}
-    
-  return true;}
+#define H3LIS331_REGISTER_OUT_X_L   0b10101000
+#define H3LIS331_REGISTER_OUT_Y_L   0b10101010
+#define H3LIS331_REGISTER_OUT_Z_L   0b10101100
 
-void getH3LIS331DL(boolean threeAxisMode) {
-
-  #define H3LIS331_REGISTER_OUT_X_L   0b10101000
-  #define H3LIS331_REGISTER_OUT_Y_L   0b10101010
-  #define H3LIS331_REGISTER_OUT_Z_L   0b10101100
-  //readSensor(H3LIS331_ADDRESS, H3LIS331_REGISTER_OUT_X_L, (byte)4);
+  //setup the bus
+  setActiveBus(sensors.highGBusType, bus.highGWire, bus.highGRate, H3LIS331_ADDRESS, bus.highGSPI, bus.highGSet, pins.highG_CS);
 
   //I2C Bus----------------------------------------------------------------
-  if(!highG.SPIbus) {
+  if (sensors.highGBusType == 'I') {
 
-    if(!threeAxisMode){
-      if(highG.orientX == 'Z'){
-        readSensor(H3LIS331_ADDRESS, H3LIS331_REGISTER_OUT_X_L, 2);
-        highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
-      else if(highG.orientY == 'Z'){
-        readSensor(H3LIS331_ADDRESS, H3LIS331_REGISTER_OUT_Y_L, 2);
-        highG.rawY = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
-      else if(highG.orientZ == 'Z'){
-        readSensor(H3LIS331_ADDRESS, H3LIS331_REGISTER_OUT_Z_L, 2);    
-        highG.rawZ = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
-      return;}
+    //set to zero
+    highG.rawX = highG.biasX;
+    highG.rawY = highG.biasY;
+    highG.rawZ = highG.biasZ;
 
-     else{
-      readSensor(H3LIS331_ADDRESS, H3LIS331_REGISTER_OUT_X_L, 6);
+    //high-G over I2C is slow and getting all axes is redundant, so only grab the Z axis
+    if (highG.orientX == 'Z') {
+      burstRead(H3LIS331_REGISTER_OUT_X_L, 2);
+      highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
+    }
+    else if (highG.orientY == 'Z') {
+      burstRead(H3LIS331_REGISTER_OUT_Y_L, 2);
+      highG.rawY = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
+    }
+    else if (highG.orientZ == 'Z') {
+      burstRead(H3LIS331_REGISTER_OUT_Z_L, 2);
+      highG.rawZ = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
+    }
+    else if (highG.orientX == 'Q') { //calibration
+      burstRead(H3LIS331_REGISTER_OUT_X_L, 6);
       highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
       highG.rawY = (int16_t)(rawData[2] | (rawData[3] << 8)) >> 4;
       highG.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;
-      return;}}
+    }
+    return;
+  }
 
   //SPI Bus----------------------------------------------------------------
   else {
 
-    if(!threeAxisMode){
-      if(highG.orientX == 'Z'){
-        spiRead(0xC0 | H3LIS331_REGISTER_OUT_X_L, pins.highG_CS, 2);
-        highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
-      else if(highG.orientY == 'Z'){
-        spiRead(0xC0 | H3LIS331_REGISTER_OUT_Y_L, pins.highG_CS, 2);
-        highG.rawY = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
-      else if(highG.orientZ == 'Z'){
-        spiRead(0xC0 | H3LIS331_REGISTER_OUT_Z_L, pins.highG_CS, 2);   
-        highG.rawZ = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
-      return;}
-    
-    else{
-      spiRead(0xC0 | H3LIS331_REGISTER_OUT_X_L, pins.highG_CS, 6);
-      highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
-      highG.rawY = (int16_t)(rawData[2] | (rawData[3] << 8)) >> 4;
-      highG.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;}}
-}
+    //get data from all axes and assemble
+    burstRead(0xC0 | H3LIS331_REGISTER_OUT_X_L, 6);
+    highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
+    highG.rawY = (int16_t)(rawData[2] | (rawData[3] << 8)) >> 4;
+    highG.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;
+  }
+}//end getH3LIS331DL
 
 //***************************************************************************
 //ADS1115 ADC interface to ADXL377
 //***************************************************************************
-/**************************************************************************/
-/*!
-    @file     Adafruit_ADS1015.cpp
-    @author   K.Townsend (Adafruit Industries)
-    @license  BSD (see license.txt)
-
-    Driver for the ADS1015/ADS1115 ADC
-
-    This is a library for the Adafruit MPL115A2 breakout
-    ----> https://www.adafruit.com/products/???
-
-    Adafruit invests time and resources providing this open source code,
-    please support Adafruit and open-source hardware by purchasing
-    products from Adafruit!
-
-    @section  HISTORY
-
-    v1.0 - First release
-*/
-/**************************************************************************/
+bool beginADS1115(char dataRate) {
 
 #define ADS1115_ADDRESS                 (0x48)
 
-static void writeRegister(uint8_t i2cAddress, uint8_t reg, uint16_t value) {
+  //Define bus settings and start bus - ONLY I2C!!
+  bus.activeAddress = ADS1115_ADDRESS;
+  bus.highGRate = 400000;
+  startI2C(sensors.highGBusNum, bus.highGRate);
+  bus.highGWire = bus.activeWire;
 
-  switch (pins.i2c) {
+  //Check to see if there is a sensor at this address, no whoami
+  if (!testSensor(ADS1115_ADDRESS)) {
+    Serial.println(F("ADS1115 not found!"));
+    return false;
+  }
+  Serial.println(F("ADS1115 OK!"));
 
-    case 0:
-      Wire.beginTransmission(i2cAddress);
-      Wire.write((uint8_t)reg);
-      Wire.write((uint8_t)(value >> 8));
-      Wire.write((uint8_t)(value & 0xFF));
-      Wire.endTransmission();
+  //       OS: 1   -> begin conversion
+  //      MUX: 100 -> read pin 0, compare to ground
+  //      PGA: 001 -> +/- 4.096V Gain
+  //     MODE: 0   -> Continuous Conversion
+  //       DR: 111 -> 860 SPS, 110 -> 475 SPS, 010 -> 32 SPS
+  //COMP_MODE: 0   -> Traditional Comparator
+  // COMP_POL: 0   -> Active Low
+  // COMP_LAT: 0   -> non-latching
+  // COMP_QUE: 11  -> Disable Comparator
+
+  uint16_t ADS1115settings;
+  switch (dataRate) {
+    case 'F': ADS1115settings = 0b1100001011100011;
       break;
 
-    case 1:
-      Wire1.beginTransmission(i2cAddress);
-      Wire1.write((uint8_t)reg);
-      Wire1.write((uint8_t)(value >> 8));
-      Wire1.write((uint8_t)(value & 0xFF));
-      Wire1.endTransmission();
+    case 'M': ADS1115settings = 0b1100001011000011;
       break;
 
-    case 2:
-      Wire2.beginTransmission(i2cAddress);
-      Wire2.write((uint8_t)reg);
-      Wire2.write((uint8_t)(value >> 8));
-      Wire2.write((uint8_t)(value & 0xFF));
-      Wire2.endTransmission();
+    case 'S': ADS1115settings = 0b1100001001000011;
+      break;
+
+    default: ADS1115settings = 0b1100001011100011;
       break;
   }
-}
 
-bool beginADS1115(char dataRate) {
-
-  if (!testSensor(ADS1115_ADDRESS)) {
-    if (settings.testMode) {Serial.println(F("ADS1115 not found!"));} 
-    return false;}
-  if(settings.testMode){Serial.println(F("ADS1115 OK!"));}
+  // Write config register to the ADC
+#define ADS1115_REG_CONFIG      (0x01)
+  write16(ADS1115_REG_CONFIG, ADS1115settings);
 
   highG.gainX = highG.gainY = highG.gainZ = 0.0183 * 9.80665;
   high1G = 55;
   sizeHighGfilter = 10;
 
-#define ADS1115_REG_CONFIG_DR_32SPS    (0x40)
-#define ADS1115_REG_CONFIG_DR_800SPS   (0x00E0)
-#define ADS1115_REG_CONFIG_DR_400SPS   (0x00C0)
-  uint16_t rateSPS = ADS1115_REG_CONFIG_DR_32SPS;
-
-  switch (dataRate) {
-    case 'F': rateSPS = ADS1115_REG_CONFIG_DR_800SPS;
-      break;
-
-    case 'M': rateSPS = ADS1115_REG_CONFIG_DR_400SPS;
-      break;
-
-    case 'S': rateSPS = ADS1115_REG_CONFIG_DR_32SPS;
-      break;
-  }
-
-  uint16_t configADS =
-
-#define ADS1115_REG_CONFIG_CQUE_NONE    (0x0003)
-    ADS1115_REG_CONFIG_CQUE_NONE    | // Disable the comparator (default val)
-#define ADS1115_REG_CONFIG_CLAT_NONLAT  (0x0000)
-    ADS1115_REG_CONFIG_CLAT_NONLAT  | // Non-latching (default val)
-#define ADS1115_REG_CONFIG_CPOL_ACTVLOW (0x0000)
-    ADS1115_REG_CONFIG_CPOL_ACTVLOW | // Alert/Rdy active low   (default val)
-#define ADS1115_REG_CONFIG_CMODE_TRAD   (0x0000)
-    ADS1115_REG_CONFIG_CMODE_TRAD   | // Traditional comparator (default val)
-    //set the sample rate
-    rateSPS   |
-#define ADS1115_REG_CONFIG_MODE_CONTIN  (0x0000)
-    ADS1115_REG_CONFIG_MODE_CONTIN;   // Continuous mode
-
-  //Set gain
-#define ADS1115_REG_CONFIG_PGA_4_096V   (0x0200)
-  configADS |= ADS1115_REG_CONFIG_PGA_4_096V;
-
-  //Set channel
-#define ADS1115_REG_CONFIG_MUX_SINGLE_0 (0x4000)
-  configADS |= ADS1115_REG_CONFIG_MUX_SINGLE_0;
-
-  // Set 'start single-conversion' bit
-#define ADS1115_REG_CONFIG_OS_SINGLE    (0x8000)
-  configADS |= ADS1115_REG_CONFIG_OS_SINGLE;
-
-  // Write config register to the ADC
-#define ADS1115_REG_POINTER_CONFIG      (0x01)
-  writeRegister(ADS1115_ADDRESS, ADS1115_REG_POINTER_CONFIG, configADS);
-
   return true;
 }
 
-void getADS1115(boolean threeAxisMode) {
-#define ADS1115_REG_POINTER_CONVERT     (0x00)
-  int16_t zeroLevel = 13120;
-  highG.rawX = readS16(ADS1115_REG_POINTER_CONVERT, ADS1115_ADDRESS) - zeroLevel;
+void getADS1115() {
+
+#define ADS1115_REG_CONVERT     (0x00)
+  const int16_t zeroLevel = 13120;
+
+  //set bus
+  setActiveBus(sensors.highGBusType, bus.highGWire, bus.highGRate, H3LIS331_ADDRESS, bus.highGSPI, bus.highGSet, pins.highG_CS);
+
+  //read data
+  burstRead(ADS1115_REG_CONVERT, 2);
+
+  //X-axis must be pointed towards the sky!
+  highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8));
+  highG.rawX -= zeroLevel;
 }
 
 //***************************************************************************
@@ -1108,23 +1325,30 @@ void getADS1115(boolean threeAxisMode) {
 //***************************************************************************
 
 boolean beginMPL3115A2() {
-#define MPL3115A2_ADDRESS  0x60
-#define MPL3115A2_I2C_READ 0xC1
+#define MPL3115A2_ADDRESS   0x60
+#define MPL3115A2_I2C_READ  0xC1
 #define MPL3115A2_I2C_WRITE 0xC0
-#define MPL3115A2_WHOAMI   0x0C
+#define MPL3115A2_WHOAMI    0x0C
 
-  //establish contact
-  uint8_t reply = read8(MPL3115A2_WHOAMI, MPL3115A2_ADDRESS);
+  //Define bus settings and start bus - ONLY I2C!!
+  bus.activeAddress = MPL3115A2_ADDRESS;
+  bus.baroRate = 1000000;
+  startI2C(sensors.baroBusNum, bus.baroRate);
+  bus.baroWire = bus.activeWire;
 
-  if (reply != 0xC4) {
-    if (settings.testMode) {
-      Serial.print(F("MPL3115A2 bad reply! "));
-      Serial.println(reply);
-    } return false;
+  //Check to see if there is a sensor at this address, no whoami
+  if (!testSensor(MPL3115A2_ADDRESS)) {
+    Serial.println(F("MPL3115A2 I2C Fail!"));
+    return false;
   }
-  if (settings.testMode) {
-    Serial.println(F("MPL3115A2 OK!"));
+
+  //check whoami
+  byte id = read8(MPL3115A2_WHOAMI);
+  if (id != 0xC4) {
+    Serial.print(F("MPL3115A2 not found! ")); Serial.println(id);
+    return false;
   }
+  Serial.println(F("MPL3115A2 OK!"));
 
   //set the sampling frequency
   timeBtwnBaro = 35000UL;
@@ -1136,24 +1360,19 @@ boolean beginMPL3115A2() {
   //Reset: 0
   //One Shot Mode (OST): 1
   //Standby: 0
-  write8(0x26, MPL3115A2_ADDRESS, 0b00011010);
+  //bus.activeAddress = MPL3115A2_I2C_WRITE;
+  write8(0x26, 0b00011010);
 
-  //Check for initial programming
-  byte k = 0;
-  for(byte i = 0; i < 4; i++){if( (byte)EEPROM.read(eeprom.baroPressOffset) == (byte)255){k++;}}
-  if(k >= 4){
-    baroPressOffset = 0.0F;
-    baroTempOffset = 0.0F;
-    floatUnion.val = 0.0F;
-    for(byte i = 0; i < 4; i++){EEPROM.update(eeprom.baroPressOffset + i, floatUnion.Byte[i]);}
-    for(byte i = 0; i < 4; i++){EEPROM.update(eeprom.baroTempOffset + i, floatUnion.Byte[i]);}}
-  
   return true;
 }
 
 void getMPL3115A2() {
 
-  readSensor(MPL3115A2_ADDRESS, 0x01, 5);
+  //set bus
+  setActiveBus(sensors.baroBusType, bus.baroWire, bus.baroRate, MPL3115A2_ADDRESS, bus.baroSPI, bus.baroSet, pins.baroCS);
+
+  //get data
+  burstRead(0x01, 5);
 
   uint32_t adc_P;
   adc_P = rawData[0];
@@ -1170,14 +1389,14 @@ void getMPL3115A2() {
   adc_T >>= 4;
 
   pressure = (float)(adc_P) * 0.0025 - baroPressOffset;
-  
+
   if (adc_T & 0x800) {adc_T |= 0xF000;}
   temperature = (float)(adc_T) * 0.0625 - baroTempOffset;
-  
+
   Alt = 44330.77 * (1.0 - pow(pressure / seaLevelPressure, 0.1902632));
 
   //initiate next reading
-  write8(0x26, MPL3115A2_ADDRESS, 0b00011010);
+  write8(0x26, 0b00011010);
 
   newBaro = newTemp = true;
 }
@@ -1185,6 +1404,7 @@ void getMPL3115A2() {
 float pressureToAltitude(float seaLevel, float atmospheric) {
   return 44330.77 * (1.0 - pow(atmospheric / seaLevel, 0.1902632));
 }
+
 //***************************************************************************
 //BMP180 Pressure Sensor
 //***************************************************************************
@@ -1238,38 +1458,93 @@ boolean beginBMP180() {
 #define BMP180_REGISTER_CAL_MC  0xBC
 #define BMP180_REGISTER_CAL_MD  0xBE
 
-  byte id;
+  //Define bus settings and start bus - ONLY I2C!!
+  bus.activeAddress = BMP180_ADDRESS;
+  bus.baroRate = 1000000;
+  startI2C(sensors.baroBusNum, bus.baroRate);
+  bus.baroWire = bus.activeWire;
 
-  //check the whoAmI register
+  //establish contact
   if (!testSensor(BMP180_ADDRESS)) {
     if (settings.testMode) {
       Serial.println(F("BMP180 not found!"));
-    } return false;
+    }
+    return false;
   }
-  id = read8(0xD0, BMP180_ADDRESS);
-  if (id != 0x55) {
-    if (settings.testMode) {
-      Serial.println(F("BMP180 not found!"));
-    } return false;
+
+  //check whoami
+  byte id = read8(0xD0);
+  if (id != 0x58) {
+    Serial.println(F("BMP180 not found!"));
+    return false;
   }
-  if (settings.testMode) {
-    Serial.println(F("BMP180 OK!"));
-  }
+  Serial.println(F("BMP180 OK!"));
 
   //Read calibration coefficients
-  _BMP180_coeffs.ac1 = readS16(BMP180_REGISTER_CAL_AC1, BMP180_ADDRESS);
-  _BMP180_coeffs.ac2 = readS16(BMP180_REGISTER_CAL_AC2, BMP180_ADDRESS);
-  _BMP180_coeffs.ac3 = readS16(BMP180_REGISTER_CAL_AC3, BMP180_ADDRESS);
-  _BMP180_coeffs.ac4 = read16(BMP180_REGISTER_CAL_AC4, BMP180_ADDRESS);
-  _BMP180_coeffs.ac5 = read16(BMP180_REGISTER_CAL_AC5, BMP180_ADDRESS);
-  _BMP180_coeffs.ac6 = read16(BMP180_REGISTER_CAL_AC6, BMP180_ADDRESS);
-  _BMP180_coeffs.b1 = readS16(BMP180_REGISTER_CAL_B1, BMP180_ADDRESS);
-  _BMP180_coeffs.b2 = readS16(BMP180_REGISTER_CAL_B2, BMP180_ADDRESS);
-  _BMP180_coeffs.mb = readS16(BMP180_REGISTER_CAL_MB, BMP180_ADDRESS);
-  _BMP180_coeffs.mc = readS16(BMP180_REGISTER_CAL_MC, BMP180_ADDRESS);
-  _BMP180_coeffs.md = readS16(BMP180_REGISTER_CAL_MD, BMP180_ADDRESS);
+  burstRead(BMP180_REGISTER_CAL_AC1, 2);
+  _BMP180_coeffs.ac1 = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_AC2, 2);
+  _BMP180_coeffs.ac2 = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_AC3, 2);
+  _BMP180_coeffs.ac3 = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_AC4, 2);
+  _BMP180_coeffs.ac4 = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_AC5, 2);
+  _BMP180_coeffs.ac5 = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_AC6, 2);
+  _BMP180_coeffs.ac6 = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_B1, 2);
+  _BMP180_coeffs.b1 = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_B2, 2);
+  _BMP180_coeffs.b2 = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_MB, 2);
+  _BMP180_coeffs.mb = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_MC, 2);
+  _BMP180_coeffs.mc = (rawData[0] << 8) | rawData[1];
+  burstRead(BMP180_REGISTER_CAL_MD, 2);
+  _BMP180_coeffs.md = (rawData[0] << 8) | rawData[1];
+
+  //since everthing happens in a timed sequence, we need to check it every cycle
+  timeBtwnBaro = 0;
 
   return true;
+}
+
+void getBMP180() {
+
+  //Get a BMP180 barometric event if needed
+  //See if a new temp is needed
+  const unsigned long tmpRdTime = 4500; //BMP180 needs 4.5ms to read temp
+  const unsigned long bmpRdTime = 25500; //BMP180 needs 25.5ms to read pressure
+  static boolean getTemp = true;
+  static boolean readTemp = false;
+  static boolean readPress = false;
+  static unsigned long tempReadStart;
+  static unsigned long pressReadStart;
+
+  if (getTemp) {
+    initiateTemp();
+    tempReadStart = micros();
+    getTemp = false;
+    readTemp = true;
+  }
+
+  if (readTemp && micros() - tempReadStart > tmpRdTime) {
+    initiatePressure(&temperature);
+    pressReadStart = micros();
+    newTemp = true;
+    readTemp = false;
+    readPress = true;
+  }
+
+  if (readPress && micros() - pressReadStart > bmpRdTime) {
+    getPressure(&pressure);
+    prevBaroAlt = Alt;
+    Alt = pressureToAltitude(seaLevelPressure, pressure);
+    readPress = false;
+    getTemp = true;
+    newBaro = true;
+  }
 }
 
 void initiateTemp() {
@@ -1277,18 +1552,28 @@ void initiateTemp() {
 #define BMP180_REGISTER_READTEMPCMD     0x2E
 #define BMP180_REGISTER_READPRESSURECMD 0x34
 
-  write8(BMP180_REGISTER_CONTROL, BMP180_ADDRESS, BMP180_REGISTER_READTEMPCMD);
+  //set bus
+  setActiveBus(sensors.baroBusType, bus.baroWire, bus.baroRate, BMP180_ADDRESS, bus.baroSPI, bus.baroSet, pins.baroCS);
+
+  //send command
+  write8(BMP180_REGISTER_CONTROL, BMP180_REGISTER_READTEMPCMD);
 }
 
 void initiatePressure(float *temp) {
   int32_t  ut = 0;
-  int32_t UT, X1, X2, B5;     // following ds convention
+  int32_t X1, X2;     // following ds convention
   float t;
 
   //Read ucompensated temperature
 #define BMP180_REGISTER_TEMPDATA 0xF6
   uint16_t rt;
-  rt = read16(BMP180_REGISTER_TEMPDATA, BMP180_ADDRESS);
+
+  //set bus
+  setActiveBus(sensors.baroBusType, bus.baroWire, bus.baroRate, BMP180_ADDRESS, bus.baroSPI, bus.baroSet, pins.baroCS);
+
+  //read data
+  burstRead(BMP180_REGISTER_TEMPDATA, 2);
+  rt = rawData[0] | (rawData[1] >> 8);
   ut = rt;
 
   //Calculate true temperature
@@ -1297,10 +1582,10 @@ void initiatePressure(float *temp) {
   _BMP180_coeffs.b5 = X1 + X2;
   t = (_BMP180_coeffs.b5 + 8) >> 4;
   t /= 10;
-  *temp = t;
+  *temp = t - baroTempOffset;
 
   //Initiate Pressure
-  write8(BMP180_REGISTER_CONTROL, BMP180_ADDRESS, BMP180_REGISTER_READPRESSURECMD + (_BMP180Mode << 6));
+  write8(BMP180_REGISTER_CONTROL, BMP180_REGISTER_READPRESSURECMD + (_BMP180Mode << 6));
 }
 
 void getPressure(float *pressure) {
@@ -1308,14 +1593,22 @@ void getPressure(float *pressure) {
   uint8_t  p8;
   uint16_t p16;
   int32_t  up = 0, compp = 0;
-  int32_t  x1, x2, b5, b6, x3, b3, p;
+  int32_t  x1, x2, b6, x3, b3, p;
   uint32_t b4, b7;
 
   //Read uncompensated pressure
 #define BMP180_REGISTER_PRESSUREDATA 0xF6
-  p16 = read16(BMP180_REGISTER_PRESSUREDATA, BMP180_ADDRESS);
+
+  //set bus
+  setActiveBus(sensors.baroBusType, bus.baroWire, bus.baroRate, BMP180_ADDRESS, bus.baroSPI, bus.baroSet, pins.baroCS);
+
+  //get data
+  burstRead(BMP180_REGISTER_PRESSUREDATA, 3);
+
+  //assemble data
+  p16 = rawData[0] | (rawData[1] >> 8);
   up = (uint32_t)p16 << 8;
-  p8 = read8(BMP180_REGISTER_PRESSUREDATA + 2, BMP180_ADDRESS);
+  p8 = rawData[2];
   up += p8;
   up >>= (8 - _BMP180Mode);
 
@@ -1344,7 +1637,7 @@ void getPressure(float *pressure) {
   compp = p + ((x1 + x2 + 3791) >> 4);
 
   /* Assign compensated pressure value */
-  *pressure = compp / 100.0F;
+  *pressure = compp / 100.0F - baroPressOffset;
 }
 
 //***************************************************************************
@@ -1423,58 +1716,85 @@ bmp280_calib_data _bmp280_calib;
 
 boolean beginBMP280() {
 
-  if (!testSensor(BMP280_ADDRESS)) {
-    if (settings.testMode) {
+  //Define bus settings and start bus
+  if (sensors.baroBusType == 'I') {
+    bus.activeAddress = BMP280_ADDRESS;
+    bus.baroRate = 1000000;
+    startI2C(sensors.baroBusNum, bus.baroRate);
+    bus.baroWire = bus.activeWire;
+  }
+  else {
+    bus.baroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.baroBusNum);
+    bus.baroSPI = bus.activeSPI;
+    bus.activeSet = bus.baroSet;
+    bus.activeCS = pins.baroCS;
+  }
+
+  //If I2C, check to see if there is a sensor at this address
+  if (sensors.baroBusType == 'I') {
+    if (!testSensor(BMP280_ADDRESS)) {
       Serial.println(F("BMP280 not found!"));
-    } return false;
+      return false;
+    }
   }
-  if (read8(BMP280_REGISTER_CHIPID, BMP280_ADDRESS) != 0x58) {
-    if (settings.testMode) {
-      Serial.println(F("BMP280 not found!"));
-    } return false;
+
+  //check whoami
+  byte id = read8(BMP280_REGISTER_CHIPID);
+  if (id != 0x58) {
+    Serial.println(F("BMP280 not found!"));
+    return false;
   }
-  if (settings.testMode) {
-    Serial.println(F("BMP280 OK!"));
-  }
+  Serial.println(F("BMP280 OK!"));
 
   //set the sampling control rate
   timeBtwnBaro = 38100UL;
- 
+
   delay(100);
-  readBMP280Coefficients();
+
+  //read coefficients
+  burstRead(BMP280_REGISTER_DIG_T1, 2);
+  _bmp280_calib.dig_T1 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_T2, 2);
+  _bmp280_calib.dig_T2 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_T3, 2);
+  _bmp280_calib.dig_T3 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P1, 2);
+  _bmp280_calib.dig_P1 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P2, 2);
+  _bmp280_calib.dig_P2 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P3, 2);
+  _bmp280_calib.dig_P3 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P4, 2);
+  _bmp280_calib.dig_P4 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P5, 2);
+  _bmp280_calib.dig_P5 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P6, 2);
+  _bmp280_calib.dig_P6 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P7, 2);
+  _bmp280_calib.dig_P7 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P8, 2);
+  _bmp280_calib.dig_P8 = (rawData[1] << 8) | rawData[0];
+  burstRead(BMP280_REGISTER_DIG_P9, 2);
+  _bmp280_calib.dig_P9 = (rawData[1] << 8) | rawData[0];
+
   //put the BMP280 into sleep mode
-  write8(BMP280_REGISTER_CONTROL, BMP280_ADDRESS, 0x00);
+  write8(BMP280_REGISTER_CONTROL, 0x00);
   //Set the config register to 0.5ms standby, 16 IIR coeff,
-  write8(BMP280_REGISTER_CONFIG,  BMP280_ADDRESS, 0b00010100);//16 = 0b00011100 = 0x1C, 8 = 0b00001100 = 0x0C
+  write8(BMP280_REGISTER_CONFIG, 0b00010100);
   //Set the control register to Ultra high resolution and sleep mode: osrr_t,osrs_p,mode
-  write8(BMP280_REGISTER_CONTROL, BMP280_ADDRESS, 0b01010111);//0b00111111 = 0x3F, 0b01010100 = 0x54, 0b01011111 = 0x5F
+  write8(BMP280_REGISTER_CONTROL, 0b01010111);
 
   return true;
 }
 
-void readBMP280Coefficients() {
-
-  _bmp280_calib.dig_T1 = read16_LE(BMP280_REGISTER_DIG_T1, BMP280_ADDRESS);
-  _bmp280_calib.dig_T2 = readS16_LE(BMP280_REGISTER_DIG_T2, BMP280_ADDRESS);
-  _bmp280_calib.dig_T3 = readS16_LE(BMP280_REGISTER_DIG_T3, BMP280_ADDRESS);
-
-  _bmp280_calib.dig_P1 = read16_LE(BMP280_REGISTER_DIG_P1, BMP280_ADDRESS);
-  _bmp280_calib.dig_P2 = readS16_LE(BMP280_REGISTER_DIG_P2, BMP280_ADDRESS);
-  _bmp280_calib.dig_P3 = readS16_LE(BMP280_REGISTER_DIG_P3, BMP280_ADDRESS);
-  _bmp280_calib.dig_P4 = readS16_LE(BMP280_REGISTER_DIG_P4, BMP280_ADDRESS);
-  _bmp280_calib.dig_P5 = readS16_LE(BMP280_REGISTER_DIG_P5, BMP280_ADDRESS);
-  _bmp280_calib.dig_P6 = readS16_LE(BMP280_REGISTER_DIG_P6, BMP280_ADDRESS);
-  _bmp280_calib.dig_P7 = readS16_LE(BMP280_REGISTER_DIG_P7, BMP280_ADDRESS);
-  _bmp280_calib.dig_P8 = readS16_LE(BMP280_REGISTER_DIG_P8, BMP280_ADDRESS);
-  _bmp280_calib.dig_P9 = readS16_LE(BMP280_REGISTER_DIG_P9, BMP280_ADDRESS);
-}
-
 void getBMP280() {
 
-  //---------------------------------------------------------------
-  //burst read from the registers
-  //---------------------------------------------------------------
-  readSensor(BMP280_ADDRESS, BMP280_REGISTER_PRESSUREDATA, 6);
+  //set bus
+  setActiveBus(sensors.baroBusType, bus.baroWire, bus.baroRate, BMP280_ADDRESS, bus.baroSPI, bus.baroSet, pins.baroCS);
+
+  //read data
+  burstRead(BMP280_REGISTER_PRESSUREDATA, 6);
 
   int32_t adc_P;
   adc_P = rawData[0];
@@ -1493,7 +1813,7 @@ void getBMP280() {
   adc_T >>= 4;
 
   //put the BMP280 into forced mode
-  write8(BMP280_REGISTER_CONTROL, BMP280_ADDRESS, 0b10101010); //0b01010110 = 0x56
+  write8(BMP280_REGISTER_CONTROL, 0b10101010);
 
   //---------------------------------------------------------------
   //compensate and compute temperature
@@ -1512,6 +1832,7 @@ void getBMP280() {
 
   temperature  = (t_fine * 5 + 128) >> 8;
   temperature *= .01;
+  temperature -= - baroTempOffset;
   //---------------------------------------------------------------
   //Read pressure and convert
   //---------------------------------------------------------------
@@ -1526,8 +1847,9 @@ void getBMP280() {
          ((var3 * (int64_t)_bmp280_calib.dig_P2) << 12);
   var3 = (((((int64_t)1) << 47) + var3)) * ((int64_t)_bmp280_calib.dig_P1) >> 33;
 
+  // avoid exception caused by division by zero
   if (var3 == 0) {
-    pressure = 0;  // avoid exception caused by division by zero
+    pressure = 0;
   }
   else {
     p = 1048576 - adc_P;
@@ -1544,6 +1866,7 @@ void getBMP280() {
   //--------------------------------------------
 
   pressure *= 0.01;
+  pressure -= baroPressOffset;
 
   Alt = 44330 * (1.0 - pow(pressure / (seaLevelPressure), 0.1903));
 
@@ -1624,66 +1947,78 @@ bmp388_calib_data bmp388cal;
 boolean beginBMP388() {
 
 #define BMP388_REGISTER_CHIPID 0x00
-
-  if (!testSensor(BMP388_ADDRESS)) {
-    if (settings.testMode) {
-      Serial.println(F("BMP388 not found!"));
-    } return false;
-  }
-  if (read8(BMP388_REGISTER_CHIPID, BMP388_ADDRESS) != 0x50) {
-    if (settings.testMode) {
-      Serial.println(F("BMP388 not found!"));
-    } return false;
-  }
-  if (settings.testMode) {
-    Serial.println(F("BMP388 OK!"));
-  }
-
 #define BMP388_REGISTER_PWR_CTRL  0x1B
 #define BMP388_REGISTER_CONFIG    0x1F
 #define BMP388_REGISTER_OSR       0x1C
 
+  //Define bus settings and start bus
+  if (sensors.baroBusType == 'I') {
+    bus.activeAddress = BMP388_ADDRESS;
+    bus.baroRate = 1000000;
+    startI2C(sensors.baroBusNum, bus.baroRate);
+    bus.baroWire = bus.activeWire;
+  }
+  else {
+    bus.baroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.baroBusNum);
+    bus.baroSPI = bus.activeSPI;
+    bus.activeSet = bus.baroSet;
+    bus.activeCS = pins.baroCS;
+  }
+
+  //If I2C, check to see if there is a sensor at this address
+  if (sensors.baroBusType == 'I') {
+    if (!testSensor(BMP388_ADDRESS)) {
+      Serial.println(F("BMP388 not found!"));
+      return false;
+    }
+  }
+
+  //check whoami
+  byte id = read8(BMP388_REGISTER_CHIPID);
+  if (id != 0x50) {
+    Serial.println(F("BMP388 not found!"));
+    return false;
+  }
+  Serial.println(F("BMP388 OK!"));
+
   delay(100);
 
-  readBMP388Coefficients();
+  //read the calibration values
+  //8bit values
+  burstRead(REGISTER_NVM_PAR_P11, 1);
+  bmp388cal.NVM_PAR_P11 = (int8_t)rawData[0];
+  burstRead(REGISTER_NVM_PAR_P10, 1);
+  bmp388cal.NVM_PAR_P10 = (int8_t)rawData[0];
+  burstRead(REGISTER_NVM_PAR_P08, 1);
+  bmp388cal.NVM_PAR_P08 = (int8_t)rawData[0];
+  burstRead(REGISTER_NVM_PAR_P07, 1);
+  bmp388cal.NVM_PAR_P07 = (int8_t)rawData[0];
+  burstRead(REGISTER_NVM_PAR_P04, 1);
+  bmp388cal.NVM_PAR_P04 = (int8_t)rawData[0];
+  burstRead(REGISTER_NVM_PAR_P03, 1);
+  bmp388cal.NVM_PAR_P03 = (int8_t)rawData[0];
+  burstRead(REGISTER_NVM_PAR_T3 , 1);
+  bmp388cal.NVM_PAR_T3  = (int8_t)rawData[0];
 
-  //put the BMP388 into sleep mode
-  write8(BMP388_REGISTER_PWR_CTRL, BMP388_ADDRESS, 0x00);
+  //16bit values
+  burstRead(REGISTER_NVM_PAR_P09L, 2);
+  bmp388cal.NVM_PAR_P09 = (rawData[1] << 8) | rawData[0];
+  burstRead(REGISTER_NVM_PAR_P06L, 2);
+  bmp388cal.NVM_PAR_P06 = (rawData[1] << 8) | rawData[0];
+  burstRead(REGISTER_NVM_PAR_P05L, 2);
+  bmp388cal.NVM_PAR_P05 = (rawData[1] << 8) | rawData[0];
+  burstRead(REGISTER_NVM_PAR_P02L, 2);
+  bmp388cal.NVM_PAR_P02 = (rawData[1] << 8) | rawData[0];
+  burstRead(REGISTER_NVM_PAR_P01L, 2);
+  bmp388cal.NVM_PAR_P01 = (rawData[1] << 8) | rawData[0];
+  burstRead(REGISTER_NVM_PAR_T2L,  2);
+  bmp388cal.NVM_PAR_T2  = (rawData[1] << 8) | rawData[0];
+  burstRead(REGISTER_NVM_PAR_T1L,  2);
+  bmp388cal.NVM_PAR_T1  = (rawData[1] << 8) | rawData[0];
 
-  //Set the config register 4 IIR coeff: 010 = 4
-  write8(BMP388_REGISTER_CONFIG,  BMP388_ADDRESS, 0b00000100);
-
-  //Set the control register to Ultra high resolution
-  //osr_p: 100 = 16x (2:0)
-  //osr_t: 001 = 2x  (5:3)
-  write8(BMP388_REGISTER_OSR, BMP388_ADDRESS, 0b00001100);
-
-  //set the sampling control rate
-  timeBtwnBaro = 40000UL;
-
-  return true;
-}
-
-void readBMP388Coefficients() {
-
+  //recalculate values
   double denominator;
-
-  bmp388cal.NVM_PAR_P11 = readS8(REGISTER_NVM_PAR_P11, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P10 = readS8(REGISTER_NVM_PAR_P10, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P09 = readS16_LE(REGISTER_NVM_PAR_P09L, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P08 = readS8(REGISTER_NVM_PAR_P08, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P07 = readS8(REGISTER_NVM_PAR_P07, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P06 = read16_LE(REGISTER_NVM_PAR_P06L, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P05 = read16_LE(REGISTER_NVM_PAR_P05L, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P04 = readS8(REGISTER_NVM_PAR_P04, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P03 = readS8(REGISTER_NVM_PAR_P03, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P02 = readS16_LE(REGISTER_NVM_PAR_P02L, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_P01 = readS16_LE(REGISTER_NVM_PAR_P01L, BMP388_ADDRESS);
-
-  bmp388cal.NVM_PAR_T3 = readS8(REGISTER_NVM_PAR_T3, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_T2 = read16_LE(REGISTER_NVM_PAR_T2L, BMP388_ADDRESS);
-  bmp388cal.NVM_PAR_T1 = read16_LE(REGISTER_NVM_PAR_T1L, BMP388_ADDRESS);
-
   denominator = 0.00390625f;
   bmp388cal.PAR_T1 = (double)bmp388cal.NVM_PAR_T1 / denominator;
 
@@ -1724,6 +2059,22 @@ void readBMP388Coefficients() {
 
   denominator = 1048576.0f;
   bmp388cal.PAR_P01 = ((double)bmp388cal.NVM_PAR_P01 - 16384.0f) / denominator;
+
+  //put the BMP388 into sleep mode
+  write8(BMP388_REGISTER_PWR_CTRL, 0x00);
+
+  //Set the config register 4 IIR coeff: 010 = 4
+  write8(BMP388_REGISTER_CONFIG, 0b00000100);
+
+  //Set the control register to Ultra high resolution
+  //osr_p: 100 = 16x (2:0)
+  //osr_t: 001 = 2x  (5:3)
+  write8(BMP388_REGISTER_OSR, 0b00001100);
+
+  //set the sampling control rate
+  timeBtwnBaro = 40000UL;
+
+  return true;
 }
 
 void getBMP388() {
@@ -1734,7 +2085,11 @@ void getBMP388() {
 
 #define BMP388_REGISTER_PRESSUREDATA 0x04
 
-  readSensor(BMP388_ADDRESS, BMP388_REGISTER_PRESSUREDATA, 6);
+  //set bus
+  setActiveBus(sensors.baroBusType, bus.baroWire, bus.baroRate, BMP388_ADDRESS, bus.baroSPI, bus.baroSet, pins.baroCS);
+
+  //get data
+  burstRead(BMP388_REGISTER_PRESSUREDATA, 6);
 
   uint32_t uncomp_press;
   /*uncomp_press = Wire2.read();
@@ -1762,7 +2117,7 @@ void getBMP388() {
   //press_en: 1 (0)
   //temp_en:  1 (1)
   //mode:     01 (5:4)
-  write8(BMP388_REGISTER_PWR_CTRL, BMP388_ADDRESS, 0b00010011);
+  write8(BMP388_REGISTER_PWR_CTRL, 0b00010011);
 
   //---------------------------------------------------------------
   //compensate and compute temperature
@@ -1782,7 +2137,7 @@ void getBMP388() {
   bmp388cal.t_lin = partial_data2 + (partial_data1 * partial_data1) * bmp388cal.PAR_T3;
 
   temperature = bmp388cal.t_lin;
-  //temperature *= .01;
+  temperature -= - baroTempOffset;
 
   //---------------------------------------------------------------
   //compensate and compute pressure
@@ -1809,330 +2164,261 @@ void getBMP388() {
   //--------------------------------------------
 
   pressure *= 0.01;
+  pressure -= baroPressOffset;
 
   Alt = 44330 * (1.0 - pow(pressure / (seaLevelPressure), 0.1903));
   newBaro = newTemp = true;
 }
 
 //***************************************************************************
-//MS5611 Barometric Pressure Sensor
+//MS5611 and MS5607 Barometric Pressure Sensors
 //***************************************************************************
-#define MS5611_ADDRESS                (0x77)
+#define MS56XX_ADDRESS (0x77)
+int16_t MS56XX_PROM[6];
+int32_t MS56XX_dT;
+int32_t MS56XX_TEMP;
 
-int16_t MS5611_PROM[6];
-int32_t MS5611_dT;
-int32_t MS5611_TEMP;
+void cmdMS56XX(byte cmd) {
 
-bool beginMS5611(){
+  //I2C
+  if (sensors.baroBusType == 'I') {
+    bus.activeWire->beginTransmission(bus.activeAddress);
+    bus.activeWire->write(cmd);
+    bus.activeWire->endTransmission();
+  }
 
-  if (!testSensor(MS5611_ADDRESS)) {
-    if (settings.testMode) {Serial.println(F("MS5611 not found!"));} 
-    return false;}
-  else{if(settings.testMode){Serial.println(F("MS5611 OK!"));}}
+  //SPI
+  else {
+    //begin SPI transaction
+    bus.activeSPI->beginTransaction(bus.activeSet);
+    digitalWriteFast(bus.activeCS, LOW);
+
+    //Send data
+    bus.activeSPI->transfer(cmd);
+
+    //end SPI transaction
+    digitalWriteFast(bus.activeCS, HIGH);
+    bus.activeSPI->endTransaction();
+  }
+}
+
+bool beginMS56XX() {
+
+#define prom1MS56XX 0xA2
+#define prom2MS56XX 0xA4
+#define prom3MS56XX 0xA6
+#define prom4MS56XX 0xA8
+#define prom5MS56XX 0xAA
+#define prom6MS56XX 0xAC
+
+  //Define bus settings and start bus
+  if (sensors.baroBusType == 'I') {
+    bus.activeAddress = MS56XX_ADDRESS;
+    bus.baroRate = 1000000;
+    startI2C(sensors.baroBusNum, bus.baroRate);
+    bus.baroWire = bus.activeWire;
+  }
+  else {
+    bus.baroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
+    startSPI(sensors.baroBusNum);
+    bus.baroSPI = bus.activeSPI;
+    bus.activeSet = bus.baroSet;
+    bus.activeCS = pins.baroCS;
+  }
+
+  //If I2C, check to see if there is a sensor at this address
+  if (sensors.baroBusType == 'I') {
+    if (!testSensor(MS56XX_ADDRESS)) {
+      Serial.println(F("MS56XX not found!"));
+      return false;
+    }
+  }
+  Serial.println(F("MS56XX OK!"));
 
   //reset
-  CmdMS5611(0x1E);
+  cmdMS56XX(0x1E);
   delay(100);
 
   //read PROM
-  readPromMS5611();
+  burstRead(prom1MS56XX, 2);
+  MS56XX_PROM[0] = (rawData[0] << 8 | rawData[1]);
+  burstRead(prom2MS56XX, 2);
+  MS56XX_PROM[1] = (rawData[0] << 8 | rawData[1]);
+  burstRead(prom3MS56XX, 2);
+  MS56XX_PROM[2] = (rawData[0] << 8 | rawData[1]);
+  burstRead(prom4MS56XX, 2);
+  MS56XX_PROM[3] = (rawData[0] << 8 | rawData[1]);
+  burstRead(prom5MS56XX, 2);
+  MS56XX_PROM[4] = (rawData[0] << 8 | rawData[1]);
+  burstRead(prom6MS56XX, 2);
+  MS56XX_PROM[5] = (rawData[0] << 8 | rawData[1]);
 
   //get initial temperature
-  CmdMS5611(0x58);
+  cmdMS56XX(0x58);
   delayMicroseconds(9040);
-  ReadMS5611();
-  temperature = ConvertTempMS5611();
-  if(settings.testMode){Serial.print("Intial Temp Complete: ");Serial.println(temperature, 1);}
+  burstRead(0x00, 3);
+  temperature = ConvertTempMS56XX();
+  if (settings.testMode) {
+    Serial.print("Intial Temp Complete: ");
+    Serial.println(temperature, 1);
+  }
 
   //get initial pressure
-  CmdMS5611(0x48);
+  cmdMS56XX(0x48);
   delayMicroseconds(9040);
-  ReadMS5611();
-  pressure = ConvertPressMS5611();
-  if(settings.testMode){Serial.print("Intial Press Complete: ");Serial.println(pressure, 2);}
+  burstRead(0x00, 3);
+  pressure = ConvertPressMS56XX();
+  if (settings.testMode) {
+    Serial.print("Intial Press Complete: ");
+    Serial.println(pressure, 2);
+  }
 
   //get another pressure
-  CmdMS5611(0x48);
-  
-  return true;}
+  cmdMS56XX(0x48);
 
-void getMS5611(){
-  
+  //set the sampling control rate to 110Hz
+  timeBtwnBaro = 9090UL;
+
+  return true;
+}
+
+void getMS56XX() {
+
   static byte counter = 0;
-  static float prevAlt = 0;
+
+  //set bus
+  setActiveBus(sensors.baroBusType, bus.baroWire, bus.baroRate, MS56XX_ADDRESS, bus.baroSPI, bus.baroSet, pins.baroCS);
 
   //Get pressure
-  if(counter < 10){
-    
+  if (counter < 10) {
+
     //D2 at 4096
     //Read pressure
-    ReadMS5611();
-    pressure = ConvertPressMS5611();
+    burstRead(0x00, 3);
+    pressure = ConvertPressMS56XX();
 
     //update the counter
     counter++;
 
     //if we have done 10 pressure readings, then initiate a temperature reading
-    if(counter >= 10){CmdMS5611(0x58);}
+    if (counter >= 10) {
+      cmdMS56XX(0x58);
+    }
+
     //else issue the next pressure command
-    else{CmdMS5611(0x48);}}
+    else {
+      cmdMS56XX(0x48);
+    }
+  }
 
   //Read temp and issue command for pressure
-  else if(counter >= 10){
-    ReadMS5611();
-    temperature = ConvertTempMS5611();
-    CmdMS5611(0x48);
-    counter = 0;}
-
-  //set the sampling control rate to 110Hz
-  timeBtwnBaro = 9090UL;
+  else if (counter >= 10) {
+    //Read Temp
+    burstRead(0x00, 3);
+    temperature = ConvertTempMS56XX();
+    //Pressure Command
+    cmdMS56XX(0x48);
+    counter = 0;
+  }
 }
 
-void readPromMS5611(){
+float ConvertTempMS56XX() {
 
-  #define prom1MS5611 0xA2
-  #define prom2MS5611 0xA4
-  #define prom3MS5611 0xA6
-  #define prom4MS5611 0xA8
-  #define prom5MS5611 0xAA
-  #define prom6MS5611 0xAC
-  
-  readSensor(MS5611_ADDRESS, prom1MS5611, 2);
-  MS5611_PROM[0] = (rawData[0] << 8 | rawData[1]);
-  readSensor(MS5611_ADDRESS, prom2MS5611, 2);
-  MS5611_PROM[1] = (rawData[0] << 8 | rawData[1]);
-  readSensor(MS5611_ADDRESS, prom3MS5611, 2);
-  MS5611_PROM[2] = (rawData[0] << 8 | rawData[1]);
-  readSensor(MS5611_ADDRESS, prom4MS5611, 2);
-  MS5611_PROM[3] = (rawData[0] << 8 | rawData[1]);
-  readSensor(MS5611_ADDRESS, prom5MS5611, 2);
-  MS5611_PROM[4] = (rawData[0] << 8 | rawData[1]);
-  readSensor(MS5611_ADDRESS, prom6MS5611, 2);
-  MS5611_PROM[5] = (rawData[0] << 8 | rawData[1]);}
-  
-void CmdMS5611(byte cmd){
+  uint16_t C6 = MS56XX_PROM[5];
+  uint16_t C5 = MS56XX_PROM[4];
 
-  switch (pins.i2c) {
-  
-    case 0:
-      Wire.setRate(F_BUS, 1000000);
-      Wire.beginTransmission(MS5611_ADDRESS);
-      Wire.write(cmd);
-      Wire.endTransmission(I2C_STOP);
-      Wire.setRate(F_BUS, 400000);
-      break;
-    
-    case 1:
-      Wire1.setRate(F_BUS, 1000000);
-      Wire1.beginTransmission(MS5611_ADDRESS);
-      Wire1.write(cmd);
-      Wire1.endTransmission(I2C_STOP);
-      Wire1.setRate(F_BUS, 400000);
-      break;
-      
-    case 2:
-      Wire2.setRate(F_BUS, 1000000);
-      Wire2.beginTransmission(MS5611_ADDRESS);
-      Wire2.write(cmd);
-      Wire2.endTransmission(I2C_STOP);
-      Wire2.setRate(F_BUS, 400000);
-      break;}
-}
+  uint32_t D2 = (rawData[0] << 16) | (rawData[1] << 8) | rawData[2];
 
-void ReadMS5611(){
-  
-  switch (pins.i2c) {
+  MS56XX_dT = D2 - (C5 * 256);
 
-    case 0:
-      Wire.setRate(F_BUS, 1000000);
-      readSensor(MS5611_ADDRESS, 0x00, 3);
-      Wire.setRate(F_BUS, 400000);
-      break;
+  MS56XX_TEMP = 2000 + ((MS56XX_dT * C6) / 8388608);
 
-   case 1:
-      Wire1.setRate(F_BUS, 1000000);
-      readSensor(MS5611_ADDRESS, 0x00, 3);
-      Wire1.setRate(F_BUS, 400000);
-      break;
-
-   case 2:
-      Wire2.setRate(F_BUS, 1000000);
-      readSensor(MS5611_ADDRESS, 0x00, 3);
-      Wire2.setRate(F_BUS, 400000);
-      break;}
-
-}
-
-float ConvertTempMS5611(){
-
-  uint16_t C6 = MS5611_PROM[5];
-  uint16_t C5 = MS5611_PROM[4];
-
-  uint32_t D2 = (rawData[0]<<16) | (rawData[1]<<8) | rawData[2];
-
-  MS5611_dT = D2 - (C5*256);
-
-  MS5611_TEMP = 2000 + ((MS5611_dT*C6)/8388608);
-  
   int32_t T2 = 0L;
-  if(MS5611_TEMP < 2000){T2 = (MS5611_dT * MS5611_dT)/2147483648;}
+  if (MS56XX_TEMP < 2000) {
+    T2 = (MS56XX_dT * MS56XX_dT) / 2147483648;
+  }
 
-  MS5611_TEMP -= T2;
-   
-  float finalTemp = ((float)MS5611_TEMP)*0.01;
+  MS56XX_TEMP -= T2;
+
+  float finalTemp = ((float)MS56XX_TEMP) * 0.01 - baroTempOffset;;
 
   newTemp = true;
 
-  return finalTemp;}
+  return finalTemp;
+}
 
-float ConvertPressMS5611(){
+float ConvertPressMS56XX() {
 
-  uint16_t C1 = MS5611_PROM[0];
-  uint16_t C2 = MS5611_PROM[1];
-  uint16_t C3 = MS5611_PROM[2];
-  uint16_t C4 = MS5611_PROM[3];
-
-  int64_t OFF1 = ((int64_t)C2<<16) + (((int64_t)C4 * (int64_t)MS5611_dT)>>7);
-  int64_t SENS = ((int64_t)C1<<15) + (((int64_t)C3 * (int64_t)MS5611_dT)>>8);
-    
+  uint16_t C1 = MS56XX_PROM[0];
+  uint16_t C2 = MS56XX_PROM[1];
+  uint16_t C3 = MS56XX_PROM[2];
+  uint16_t C4 = MS56XX_PROM[3];
+  int64_t OFF1;
+  int64_t SENS;
   int64_t OFF2 = 0;
   int64_t SENS2 = 0;
-  if(temperature < 20.0F){
-    OFF2  = 5 * ((int64_t)(MS5611_TEMP - 2000) * (int64_t)(MS5611_TEMP - 2000)) / 2;
-    SENS2 = 5 * ((int64_t)(MS5611_TEMP - 2000) * (int64_t)(MS5611_TEMP - 2000)) / 4;}
+  uint32_t D1;
+  int32_t p;
 
-  if(temperature < -15.0F){
-    OFF2 += 7*(int64_t)(MS5611_TEMP +1500)*(int64_t)(MS5611_TEMP +1500);
-    SENS2 += 11*(int64_t)(MS5611_TEMP +1500)*(int64_t)(MS5611_TEMP +1500)/2;}
+  //-------------------------------------------------------------
+  //MS5611
+  //-------------------------------------------------------------
+  if (sensors.status_MS5611) {
+    OFF1 = ((int64_t)C2 << 16) + (((int64_t)C4 * (int64_t)MS56XX_dT) >> 7);
+    SENS = ((int64_t)C1 << 15) + (((int64_t)C3 * (int64_t)MS56XX_dT) >> 8);
 
-  OFF1 -= OFF2;
-  SENS -= SENS2;
+    if (temperature < 20.0F) {
+      OFF2  = 5 * ((int64_t)(MS56XX_TEMP - 2000) * (int64_t)(MS56XX_TEMP - 2000)) / 2;
+      SENS2 = 5 * ((int64_t)(MS56XX_TEMP - 2000) * (int64_t)(MS56XX_TEMP - 2000)) / 4;
+    }
 
-  uint32_t D1 = (uint32_t)(rawData[0] << 16 | (rawData[1] << 8) | rawData[2]);
-    
-  int32_t p = (((D1*SENS)>>21) - OFF1)>>15;
+    if (temperature < -15.0F) {
+      OFF2 += 7 * (int64_t)(MS56XX_TEMP + 1500) * (int64_t)(MS56XX_TEMP + 1500);
+      SENS2 += 11 * (int64_t)(MS56XX_TEMP + 1500) * (int64_t)(MS56XX_TEMP + 1500) / 2;
+    }
 
-  pressure = ((float)p) * 0.01;
+    OFF1 -= OFF2;
+    SENS -= SENS2;
+
+    D1 = (uint32_t)(rawData[0] << 16 | (rawData[1] << 8) | rawData[2]);
+
+    p = (((D1 * SENS) >> 21) - OFF1) >> 15;
+  }
+
+  //-------------------------------------------------------------
+  //MS5607
+  //-------------------------------------------------------------
+  if (sensors.status_MS5607) {
+    OFF1 = ((int64_t)C2 << 17) + (((int64_t)C4 * (int64_t)MS56XX_dT) >> 6);
+    SENS = ((int64_t)C1 << 16) + (((int64_t)C3 * (int64_t)MS56XX_dT) >> 7);
+
+    if (temperature < 20.0F) {
+      OFF2  = 61 * ((int64_t)(MS56XX_TEMP - 2000) * (int64_t)(MS56XX_TEMP - 2000)) / 16;
+      SENS2 = 2 * ((int64_t)(MS56XX_TEMP - 2000) * (int64_t)(MS56XX_TEMP - 2000));
+    }
+
+    if (temperature < -15.0F) {
+      OFF2 += 15 * (int64_t)(MS56XX_TEMP + 1500) * (int64_t)(MS56XX_TEMP + 1500);
+      SENS2 += 8 * (int64_t)(MS56XX_TEMP + 1500) * (int64_t)(MS56XX_TEMP + 1500);
+    }
+
+    OFF1 -= OFF2;
+    SENS -= SENS2;
+
+    D1 = (uint32_t)(rawData[0] << 16 | (rawData[1] << 8) | rawData[2]);
+
+    p = (((D1 * SENS) >> 21) - OFF1) >> 15;
+  }
+
+  //---------------------------------------------
+  //final conversion
+  //---------------------------------------------
+
+  pressure = ((float)p) * 0.01 - baroPressOffset;
 
   Alt = 44330 * (1.0 - pow(pressure / (seaLevelPressure), 0.1903));
 
   newBaro = true;
 
-  return pressure;}
-  
-//***************************************************************************
-//Common I2C helper functions
-//***************************************************************************
-
-uint16_t read16(byte reg, byte _i2caddr) {
-
-  uint16_t value;
-  readSensor(_i2caddr, reg, 2);
-  value = (rawData[0] << 8) | rawData[1];
-  return value;
+  return pressure;
 }
-
-uint16_t read16_LE(byte reg, byte _i2caddr) {
-  uint16_t temp = read16(reg, _i2caddr);
-  return (temp >> 8) | (temp << 8);
-}
-
-int16_t readS16_LE(byte reg, byte _i2caddr) {
-  return (int16_t)read16_LE(reg, _i2caddr);
-}
-
-int16_t readS16(byte reg, byte _i2caddr) {
-  return (int16_t)read16(reg, _i2caddr);
-}
-
-int8_t readS8(byte reg, byte _i2caddr) {
-
-  int8_t value;
-  readSensor(_i2caddr, reg, 1);
-  value = rawData[0];
-  return value;
-}
-
-uint8_t read8(byte reg, byte _i2caddr) {
-
-  uint8_t value;
-  readSensor(_i2caddr, reg, (byte)1);
-  value = rawData[0];
-  return value;
-}
-
-void write8(byte reg, byte _i2caddr, byte value) {
-
-  switch (pins.i2c) {
-
-    case 0:
-      Wire.beginTransmission((uint8_t)_i2caddr);
-      Wire.write((uint8_t)reg);
-      Wire.write((uint8_t)value);
-      Wire.endTransmission(I2C_STOP);
-      break;
-
-    case 1:
-      Wire1.beginTransmission((uint8_t)_i2caddr);
-      Wire1.write((uint8_t)reg);
-      Wire1.write((uint8_t)value);
-      Wire1.endTransmission(I2C_STOP);
-      break;
-
-    case 2:
-      Wire2.beginTransmission((uint8_t)_i2caddr);
-      Wire2.write((uint8_t)reg);
-      Wire2.write((uint8_t)value);
-      Wire2.endTransmission(I2C_STOP);
-      break;
-  }
-}
-
-void spiWrite8(uint8_t reg, uint8_t data, uint8_t cs){
-
-  //begin SPI transaction
-  SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
-  digitalWriteFast(cs, LOW);
-  
-  //Send data
-  SPI.transfer(reg);
-  SPI.transfer(data);
-
-  //end SPI transaction
-  digitalWriteFast(cs, HIGH);
-  SPI.endTransaction();
-
-  //check register recieved data correctly
-  SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
-  digitalWrite(cs, LOW);
-
-  //compare data
-  SPI.transfer(reg | 0xC0);
-  rawData[0] = SPI.transfer(0);
-  if(rawData[0] != data && settings.testMode){
-    Serial.print("Register Write Fail, reg: ");
-    Serial.print(reg, HEX);
-    Serial.print(", ");
-    Serial.println(rawData[0], BIN);}
-
-  //end SPI transaction
-  digitalWriteFast(cs, HIGH);
-  SPI.endTransaction();}
-
-void spiRead(uint8_t reg, uint8_t cs, uint8_t bytes){
-
-  //begin SPI transaction
-  SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
-
-  //pull pin low
-  digitalWriteFast(cs, LOW);
-
-  //send register
-  SPI.transfer(reg);
-
-  //read data
-  for(byte i = 0; i < bytes; i++){rawData[i] = SPI.transfer(0);}
-
-  //end SPI transaction
-  digitalWriteFast(cs, HIGH);
-  SPI.endTransaction();}
