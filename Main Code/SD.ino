@@ -231,7 +231,6 @@ void createNextFileSD(){
   outputFile.print(F(",accelX,accelY,accelZ,gyroX,gyroY,gyroZ,"));
   if(threeAxisMode){outputFile.print(F("highGx,highGy,"));}
   outputFile.println(F("highGz,smoothHighGz,rollZ,yawY,pitchX,offVert,intVel,intAlt,fusionVel,fusionAlt,fltEvents,pyroCont,pyroFire,pyroPin,baroAlt,altMoveAvg,baroVel,baroPress,baroTemp,battVolt,magX,magY,magZ,gnssLat,gnssLon,gnssSpeed,gnssAlt,gnssAngle,gnssSatellites,radioPacketNum"));
-  //outputFile.sync();
   outputFile.flush();
 
   if(settings.testMode){

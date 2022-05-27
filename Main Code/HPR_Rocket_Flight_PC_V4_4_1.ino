@@ -79,6 +79,7 @@
 //stuck-in-a-loop detection and breakout
 //-------CODE START--------
 #include <EEPROM.h>
+#include <RHHardwareSPI1.h>
 #include <RH_RF95.h>
 #include <TinyGPS++.h>
 #include <PWMServo.h>
@@ -494,6 +495,7 @@ pyroMap pyro4;
 //-----------------------------------------
 //radio variables
 //-----------------------------------------
+SPIClass *radioSPI;
 byte dataPacket[77];
 boolean liftoffSync = false;
 unsigned long TXdataStart;
@@ -921,6 +923,7 @@ void setup(void) {
   //if so, then we need to rapidly get the system back up and going
   //call the rapidReset routine and immediately exit void setup
   byte lastEvent = EEPROM.read(eeprom.lastEvent);
+  if(lastEvent != 27){EEPROM.update(eeprom.lastEvent, 27);}
   if(lastEvent == (byte)255){
     lastEvent = 27;
     EEPROM.write(eeprom.lastEvent, lastEvent);}
@@ -1025,13 +1028,6 @@ void setup(void) {
   digitalWrite(pins.pyro2Fire, LOW);
   digitalWrite(pins.pyro3Fire, LOW);
   digitalWrite(pins.pyro4Fire, LOW);
-  digitalWrite(pins.radioCS, HIGH);
-  digitalWrite(pins.accelCS, HIGH);
-  digitalWrite(pins.gyroCS, HIGH);
-  digitalWrite(pins.magCS, HIGH);
-  digitalWrite(pins.highG_CS, HIGH);
-  digitalWrite(pins.baroCS, HIGH);
-  digitalWrite(pins.SD_CS, HIGH);
   Serial.println("Set Pins Low");
 
   //Start Harware Serial communication
@@ -1051,7 +1047,7 @@ void setup(void) {
 
   //setup the ADC for sampling the battery
   analogReadResolution(16);
-  
+
   //Start Sensors
   Serial.println(F("Starting Sensors..."));
   beginAccel();
@@ -1060,8 +1056,8 @@ void setup(void) {
   beginHighG();
   beginBaro();
 
-  //Start the radio
   //Radio Setup
+  //startRadio();
   RH_RF95 rf95(pins.radioCS, pins.radioIRQ);
   pinMode(pins.radioRST, OUTPUT);
   digitalWrite(pins.radioRST, HIGH);
@@ -1072,7 +1068,7 @@ void setup(void) {
   delay(100);
   digitalWrite(pins.radioRST, HIGH);
   delay(100);
-  
+
   //Initialize the radio
   sensors.status_RFM96W = rf95.init();
   //ISR is all screwed up in the RadioHead library, need to reset the IRQ pin so that it doesn't hang

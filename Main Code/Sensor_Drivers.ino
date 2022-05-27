@@ -17,7 +17,7 @@
 //28 NOV 21: Extended generic barometric pressure sensor offset calibration to all supported sensors
 //30 DEC 21: Added support for LSM6DS33, LIS3MDL, MS5607
 //03 JAN 22: Moved I2C and SPI generic functions to Bus_Mgmt tab to better support different processors
-//17 JAN 22: Updated to have any device on any I2C or SPI bus
+//10 MAY 22: Updated to have any device on any I2C or SPI bus
 //--------Supported Sensors---------
 //Accelerometers:LSM303, LSM9DS1, LSM6DS33
 //Gyroscopes: L3GD20H, LSM9DS1, LSM6DS33
@@ -605,7 +605,7 @@ bool beginL3GD20H() {
   }
   else {
     bus.gyroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.gyroBusNum);
+    startSPI(sensors.gyroBusNum, pins.gyroCS);
     bus.gyroSPI = bus.activeSPI;
     bus.activeSet = bus.gyroSet;
     bus.activeCS = pins.gyroCS;
@@ -684,7 +684,7 @@ bool beginLSM9DS1_AG() {
   }
   else {
     bus.accelSet = bus.gyroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.accelBusNum);
+    startSPI(sensors.accelBusNum, pins.accelCS);
     bus.accelSPI = bus.gyroSPI = bus.activeSPI;
     bus.activeSet = bus.accelSet;
     bus.activeCS = pins.accelCS;
@@ -745,7 +745,7 @@ bool beginLSM9DS1_M() {
   }
   else {
     bus.magSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.magBusNum);
+    startSPI(sensors.magBusNum, pins.magCS);
     bus.magSPI = bus.activeSPI;
     bus.activeSet = bus.magSet;
     bus.activeCS = pins.magCS;
@@ -881,30 +881,25 @@ bool beginLSM6DS33() {
     bus.activeAddress = LSM6DS33_ADDRESS_ACCELGYRO;
     bus.accelRate = bus.gyroRate = 400000;
     startI2C(sensors.accelBusNum, bus.accelRate);
-    bus.accelWire = bus.gyroWire = bus.activeWire;
-  }
+    bus.accelWire = bus.gyroWire = bus.activeWire;}
   else {
     bus.accelSet = bus.gyroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.accelBusNum);
+    startSPI(sensors.accelBusNum, pins.accelCS);
     bus.accelSPI = bus.gyroSPI = bus.activeSPI;
     bus.activeSet = bus.accelSet;
-    bus.activeCS = pins.accelCS;
-  }
+    bus.activeCS = pins.accelCS;}
 
   //if I2C, check if there is a sensor at this address
   if (sensors.accelBusType == 'I') {
     if (!testSensor(LSM6DS33_ADDRESS_ACCELGYRO)) {
       Serial.println(F("LSM9DS1 not found!"));
-      return false;
-    }
-  }
+      return false;}}
 
   //check whoami
   byte id = read8(LSM6DS33_WHOAMI);
   if (id != 0b01101001) {
     Serial.println(F("LSM9DS1 not found!"));
-    return false;
-  }
+    return false;}
   Serial.println(F("LSM9DS1 OK!"));
 
   //CTRL_REG1_ODR: 10000 = 1.66kHz, 1001 = 3.33kHz, 1010 = 6.66kHz
@@ -1015,7 +1010,7 @@ bool beginLIS3MDL() {
   }
   else {
     bus.magSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.magBusNum);
+    startSPI(sensors.magBusNum, pins.magCS);
     bus.magSPI = bus.activeSPI;
     bus.activeSet = bus.magSet;
     bus.activeCS = pins.magCS;
@@ -1076,6 +1071,7 @@ bool beginADXL377() {
   highG.gainX = highG.gainY = highG.gainZ = 9.80655 / 129;
   high1G = 129;
   sizeHighGfilter = 10;
+  threeAxisMode = true;
 
   startADXL377 = true;
 
@@ -1100,39 +1096,27 @@ void getADXL377(boolean threeAxisMode) {
     for (byte i = 0; i < 5; i++) {
       highGsumX += analogRead(A2);
       highGsumY += analogRead(A3);
-      highGsumZ += analogRead(A4);
-    }
+      highGsumZ += analogRead(A4);}
 
     highG.rawX = (int16_t)((highGsumX / 5) - ADCmidValue);
     highG.rawY = (int16_t)((highGsumY / 5) - ADCmidValue);
-    highG.rawZ = (int16_t)((highGsumZ / 5) - ADCmidValue);
-  }
+    highG.rawZ = (int16_t)((highGsumZ / 5) - ADCmidValue);}
 
   else {
 
     highGsumZ = 0;
 
     if (highG.orientX == 'Z') {
-      for (byte i = 0; i < 5; i++) {
-        highGsumZ += analogRead(A2);
-      }
-      highG.rawX = (int16_t)((highGsumZ / 5) - ADCmidValue);
-    }
+      for (byte i = 0; i < 5; i++) {highGsumZ += analogRead(A2);}
+      highG.rawX = (int16_t)((highGsumZ / 5) - ADCmidValue);}
 
     else if (highG.orientY == 'Z') {
-      for (byte i = 0; i < 5; i++) {
-        highGsumZ += analogRead(A3);
-      }
-      highG.rawY = (int16_t)((highGsumZ / 5) - ADCmidValue);
-    }
+      for (byte i = 0; i < 5; i++) {highGsumZ += analogRead(A3);}
+      highG.rawY = (int16_t)((highGsumZ / 5) - ADCmidValue);}
 
     else if (highG.orientZ == 'Z') {
-      for (byte i = 0; i < 5; i++) {
-        highGsumZ += analogRead(A4);
-      }
-      highG.rawZ = (int16_t)((highGsumZ / 5) - ADCmidValue);
-    }
-  }
+      for (byte i = 0; i < 5; i++) {highGsumZ += analogRead(A4);}
+      highG.rawZ = (int16_t)((highGsumZ / 5) - ADCmidValue);}}
 
 }//endvoid
 
@@ -1153,56 +1137,48 @@ bool beginH3LIS331DL() {
     bus.highGRate = 400000;
     startI2C(sensors.highGBusNum, bus.highGRate);
     bus.highGWire = bus.activeWire;
-  }
+    threeAxisMode = false;}
   else {
     bus.highGSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.highGBusNum);
+    startSPI(sensors.highGBusNum, pins.highG_CS);
     bus.highGSPI = bus.activeSPI;
     bus.activeSet = bus.highGSet;
     bus.activeCS = pins.highG_CS;
-  }
+    threeAxisMode = true;}
 
   //If I2C, check to see if there is a sensor at this address
   if (sensors.highGBusType == 'I') {
     if (!testSensor(H3LIS331_ADDRESS)) {
       Serial.println(F("H3LIS331 not found!"));
-      return false;
-    }
-  }
+      return false;}}
 
   //check whoami
-  byte id;
-  if (sensors.highGBusType == 'I') {
-    id = read8(0x0F);
-  }
-  else {
-    id = read8(0x8F);
-  }
+  byte id = 0x00;
+  if (sensors.highGBusType == 'I') {id = read8(0x0F);}
+  else {id = read8(0x8F);}
   if (id != 0x32) {
     Serial.println(F("H3LIS331 not found!"));
-    return false;
-  }
+    return false;}
   Serial.println(F("H3LIS331 OK!"));
 
   //sensor setup
-  //Set 100G scale
-  write8(H3LIS331_REGISTER_CTRL_REG4, 0b00000000);
-
   //Normal Mode (001), 1000 Hz data rate (11), Enable axes (111)
   write8(H3LIS331_REGISTER_CTRL_REG1, 0b00111111);
+  
+  //Set 100G scale
+  write8(H3LIS331_REGISTER_CTRL_REG4, 0x00);
 
   high1G = 21;
   highG.gainX = highG.gainY = highG.gainZ = 0.049 * 9.80655;
   sizeHighGfilter = 15;
 
-  return true;
-}
+  return true;}
 
 void getH3LIS331DL() {
 
-#define H3LIS331_REGISTER_OUT_X_L   0b10101000
-#define H3LIS331_REGISTER_OUT_Y_L   0b10101010
-#define H3LIS331_REGISTER_OUT_Z_L   0b10101100
+#define H3LIS331_REGISTER_OUT_X_L   0x28
+#define H3LIS331_REGISTER_OUT_Y_L   0x2A
+#define H3LIS331_REGISTER_OUT_Z_L   0x2C
 
   //setup the bus
   setActiveBus(sensors.highGBusType, bus.highGWire, bus.highGRate, H3LIS331_ADDRESS, bus.highGSPI, bus.highGSet, pins.highG_CS);
@@ -1218,34 +1194,28 @@ void getH3LIS331DL() {
     //high-G over I2C is slow and getting all axes is redundant, so only grab the Z axis
     if (highG.orientX == 'Z') {
       burstRead(H3LIS331_REGISTER_OUT_X_L, 2);
-      highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
-    }
+      highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
     else if (highG.orientY == 'Z') {
       burstRead(H3LIS331_REGISTER_OUT_Y_L, 2);
-      highG.rawY = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
-    }
+      highG.rawY = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
     else if (highG.orientZ == 'Z') {
       burstRead(H3LIS331_REGISTER_OUT_Z_L, 2);
-      highG.rawZ = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
-    }
+      highG.rawZ = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;}
     else if (highG.orientX == 'Q') { //calibration
       burstRead(H3LIS331_REGISTER_OUT_X_L, 6);
       highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
       highG.rawY = (int16_t)(rawData[2] | (rawData[3] << 8)) >> 4;
-      highG.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;
-    }
-    return;
-  }
+      highG.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;}
+    return;}
 
   //SPI Bus----------------------------------------------------------------
   else {
-
+    
     //get data from all axes and assemble
     burstRead(0xC0 | H3LIS331_REGISTER_OUT_X_L, 6);
     highG.rawX = (int16_t)(rawData[0] | (rawData[1] << 8)) >> 4;
     highG.rawY = (int16_t)(rawData[2] | (rawData[3] << 8)) >> 4;
-    highG.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;
-  }
+    highG.rawZ = (int16_t)(rawData[4] | (rawData[5] << 8)) >> 4;}
 }//end getH3LIS331DL
 
 //***************************************************************************
@@ -1725,7 +1695,7 @@ boolean beginBMP280() {
   }
   else {
     bus.baroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.baroBusNum);
+    startSPI(sensors.baroBusNum, pins.baroCS);
     bus.baroSPI = bus.activeSPI;
     bus.activeSet = bus.baroSet;
     bus.activeCS = pins.baroCS;
@@ -1960,7 +1930,7 @@ boolean beginBMP388() {
   }
   else {
     bus.baroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.baroBusNum);
+    startSPI(sensors.baroBusNum, pins.baroCS);
     bus.baroSPI = bus.activeSPI;
     bus.activeSet = bus.baroSet;
     bus.activeCS = pins.baroCS;
@@ -2220,7 +2190,7 @@ bool beginMS56XX() {
   }
   else {
     bus.baroSet = SPISettings(10000000, MSBFIRST, SPI_MODE0);
-    startSPI(sensors.baroBusNum);
+    startSPI(sensors.baroBusNum, pins.baroCS);
     bus.baroSPI = bus.activeSPI;
     bus.activeSet = bus.baroSet;
     bus.activeCS = pins.baroCS;

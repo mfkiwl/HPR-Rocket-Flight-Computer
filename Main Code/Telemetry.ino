@@ -7,7 +7,6 @@
 //-----------CHANGE LOG------------
 //17 JUL 21: initial breakout created
 //---------------------------------
-//NOTE: as of V2.02, SDFat V2.XX is INCOMPATIBLE with the RFM95 RADIOHEAD library
 
 /*900MHz FHSS Strategy
 
@@ -158,6 +157,11 @@ int16_t gndPktNum = 0;
 byte hailChnl = 0;
 float freq;
 boolean sendPkt = false;
+
+//void startRadio(){
+//  startSPI(sensors.radioBusNum, pins.radioCS);
+//  bus.radioSPI = bus.activeSPI;
+//  hardware_spi1 = bus.activeSPI;}
 
 void radioSendPacket(){
   RH_RF95 rf95(pins.radioCS, pins.radioIRQ);

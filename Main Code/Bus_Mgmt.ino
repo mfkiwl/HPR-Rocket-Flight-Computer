@@ -60,6 +60,7 @@ typedef struct{
   byte activeCS;
   uint8_t activeAddress;
   char activeBusType;
+  boolean dedicatedI2C = true;
 } activeBus;
 activeBus bus;
 //***************************************************************************
@@ -121,7 +122,13 @@ void setHWSERIAL(){
 //Generic I2C Functions
 //***************************************************************************
 void startI2C(uint8_t busNum, uint32_t rate){
-  
+
+  //if we have a dedicated bus, we can speed up the process by not setting the speed each time
+  static uint8_t dedicatedBus = 255;
+  if(dedicatedBus == 255){dedicatedBus = busNum;}
+  if(dedicatedBus != busNum){bus.dedicatedI2C = false;}
+
+  //start the bus
   if(settings.testMode){Serial.print("Starting i2c bus ");}
   
   bus.activeBusType = 'I';
@@ -213,10 +220,13 @@ bool testSensor(byte address) {
 //***************************************************************************
 //Generic SPI Functions
 //***************************************************************************
-void startSPI(uint8_t busNum){
+void startSPI(uint8_t busNum, uint8_t cs){
     
-  if(settings.testMode){Serial.print("Starting SPI bus  "); Serial.print(busNum);Serial.print(F("..."));}
+  if(settings.testMode){Serial.print("Starting SPI bus "); Serial.print(busNum);Serial.print(F("..."));}
 
+  pinMode(cs, OUTPUT);
+  digitalWrite(cs, HIGH);
+            
   bus.activeBusType = 'S';
   
   switch (busNum){
@@ -248,7 +258,7 @@ void setActiveBus(char busType, TwoWire *_wire, uint32_t Rate, byte addr, SPICla
     bus.activeBusType = 'I';
     bus.activeAddress = addr;
     bus.activeWire = _wire;
-    if(bus.activeRate != Rate){
+    if(bus.dedicatedI2C && bus.activeRate != Rate){
       bus.activeWire->setClock(Rate);
       bus.activeRate = Rate;}}
   else{
@@ -277,18 +287,18 @@ uint8_t read8(byte reg) {
   else{
     //begin SPI transaction
     bus.activeSPI->beginTransaction(bus.activeSet);
-    digitalWriteFast(bus.activeCS, LOW);
+    digitalWrite(bus.activeCS, LOW);
     //send register
     bus.activeSPI->transfer(reg);
     //read data
     val = bus.activeSPI->transfer(0);
     //end SPI transaction
-    digitalWriteFast(bus.activeCS, HIGH);
+    digitalWrite(bus.activeCS, HIGH);
     bus.activeSPI->endTransaction();}
     
     return val;}
 
-void burstRead(byte reg, byte bytes) {
+void burstRead(uint8_t reg, byte bytes) {
 
   //I2C Burst Read
   if(bus.activeBusType == 'I'){
@@ -301,16 +311,17 @@ void burstRead(byte reg, byte bytes) {
 
   //SPI Burst Read
   else{
+    
     //begin SPI transaction
     bus.activeSPI->beginTransaction(bus.activeSet);
     digitalWriteFast(bus.activeCS, LOW);
     
     //send register
     bus.activeSPI->transfer(reg);
-  
+
     //read data
     for(byte i = 0; i < bytes; i++){rawData[i] = bus.activeSPI->transfer(0);}
-  
+    
     //end SPI transaction
     digitalWriteFast(bus.activeCS, HIGH);
     bus.activeSPI->endTransaction();}}
@@ -326,6 +337,7 @@ void write8(byte reg, uint8_t val) {
 
   //SPI Write
   else{
+
     //begin SPI transaction
     bus.activeSPI->beginTransaction(bus.activeSet);
     digitalWriteFast(bus.activeCS, LOW);
@@ -333,9 +345,21 @@ void write8(byte reg, uint8_t val) {
     //Send data
     bus.activeSPI->transfer(reg);
     bus.activeSPI->transfer(val);
+
+    //End transaction
+    digitalWriteFast(bus.activeCS, HIGH);
+    bus.activeSPI->endTransaction();
+    
+    //read data back
+    bus.activeSPI->beginTransaction(bus.activeSet);
+    digitalWrite(bus.activeCS, LOW);
+    bus.activeSPI->transfer(reg | 0x80);
+    val = bus.activeSPI->transfer(0);
+   
+    Serial.print(val, BIN);Serial.print(" read from register ");Serial.println(reg, HEX);
   
     //end SPI transaction
-    digitalWriteFast(bus.activeCS, HIGH);
+    digitalWrite(bus.activeCS, HIGH);
     bus.activeSPI->endTransaction();}}
 
 void write16(byte reg, uint16_t val) {
@@ -353,7 +377,7 @@ void write16(byte reg, uint16_t val) {
     
     //begin SPI transaction
     bus.activeSPI->beginTransaction(bus.activeSet);
-    digitalWriteFast(bus.activeCS, LOW);
+    digitalWrite(bus.activeCS, LOW);
     
     //Send data
     bus.activeSPI->transfer(reg);
@@ -361,5 +385,5 @@ void write16(byte reg, uint16_t val) {
     bus.activeSPI->transfer(val & 0xFF);
   
     //end SPI transaction
-    digitalWriteFast(bus.activeCS, HIGH);
+    digitalWrite(bus.activeCS, HIGH);
     bus.activeSPI->endTransaction();}}
